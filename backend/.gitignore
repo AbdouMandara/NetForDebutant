@@ -1,0 +1,109 @@
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ==============================
+# Environnements virtuels
+# ==============================
+.venv/
+venv/
+env/
+ENV/
+
+# ==============================
+# Dépendances et packaging
+# ==============================
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+
+# ==============================
+# Django
+# ==============================
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Fichiers de migrations : à conserver dans Git
+# Ne pas ignorer les fichiers migrations/*.py
+
+# ==============================
+# Variables d'environnement et secrets
+# ==============================
+.env
+.env.*
+!.env.example
+
+# ==============================
+# Tests et couverture
+# ==============================
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+test-results/
+
+# ==============================
+# Vérification et typage
+# ==============================
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# ==============================
+# IDE et éditeurs
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==============================
+# Système d'exploitation
+# ==============================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# Fichiers temporaires
+# ==============================
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+
+# ==============================
+# Bases de données et sauvegardes locales
+# ==============================
+*.sqlite3
+*.sqlite3-journal
+*.dump
+*.sql.gz
+
+# ==============================
+# Journaux et fichiers générés
+# ==============================
+logs/
+*.pid
+
+# ==============================
+# Fichiers statiques et médias locaux
+# ==============================
+staticfiles/
+media/

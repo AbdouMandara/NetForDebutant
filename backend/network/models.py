@@ -28,6 +28,9 @@ class Notion(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    #Relationships
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+
     def __str__(self):
         return self.title
 

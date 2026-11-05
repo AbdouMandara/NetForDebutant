@@ -32,7 +32,7 @@ class Notion(models.Model):
     description = models.TextField(blank=True, null=True)
     is_published = models.BooleanField(default=False)
     photo = models.ImageField(
-        upload_to="users/photo_notions/",
+        upload_to="notions/photo/",
         blank=True,
         null=True
     )
@@ -67,7 +67,6 @@ class Utilisateur(AbstractUser):
         blank=True,
         null=True
     )
-    questions = models.ManyToManyField(Question, related_name='users')
     def __str__(self):
         return self.username
         
@@ -82,3 +81,34 @@ class Answer(models.Model):
 
     def __str__(self):
         return self.answer_text
+
+
+class TentativeQuestion(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    user = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.CASCADE,
+        related_name="tentatives"
+    )
+
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.PROTECT,
+        related_name="tentatives"
+    )
+
+    selected_answer = models.ForeignKey(
+        Answer,
+        on_delete=models.PROTECT,
+        related_name="tentatives"
+    )
+
+    answered_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.question.question_text}"

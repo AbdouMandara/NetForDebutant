@@ -1,4 +1,4 @@
-from network.models import Category, Notion, Question, Utilisateur, Answer, Difficulty
+from network.models import Category, Notion, Question, Utilisateur, Answer, Difficulty, TentativeQuestion
 from rest_framework import serializers
 
 class UtilisateurSerializer(serializers.ModelSerializer):
@@ -60,3 +60,9 @@ class AnswerSerializer(serializers.ModelSerializer):
         model = Answer
         fields = ['id', 'answer_text', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+class TentativeQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TentativeQuestion
+        fields = ['id', 'user', 'question', 'selected_answer', 'created_at']
+        read_only_fields = ['id', 'created_at']

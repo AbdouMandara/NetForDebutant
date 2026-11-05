@@ -27,6 +27,11 @@ class Notion(models.Model):
     slug = models.SlugField(unique=True)
     description = models.TextField(blank=True, null=True)
     is_published = models.BooleanField(default=False)
+    photo = models.ImageField(
+        upload_to="users/avatars/",
+        blank=True,
+        null=True
+    )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 

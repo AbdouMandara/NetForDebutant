@@ -4,11 +4,17 @@ from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
     
-class Difficulty(models.TextChoices):
-    EASY = 'Easy', 'Easy'
-    MEDIUM = 'Medium', 'Medium'
-    HARD = 'Hard', 'Hard'
 
+
+class Difficulty(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return self.name
+
+    
 class Category(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
@@ -50,7 +56,7 @@ class Question(models.Model):
 
     # Relationships
     notion = models.ForeignKey(Notion, on_delete=models.CASCADE)
-    difficulty = models.CharField(choices=Difficulty.choices, max_length=50)
+    difficulty = models.ForeignKey(Difficulty, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.question_text
@@ -78,7 +84,6 @@ class Answer(models.Model):
         return self.answer_text
 
 
-from django.conf import settings
 
 class TentativeQuestion(models.Model):
     id = models.UUIDField(
@@ -104,8 +109,6 @@ class TentativeQuestion(models.Model):
         on_delete=models.PROTECT,
         related_name="tentatives"
     )
-
-    is_correct = models.BooleanField()
 
     answered_at = models.DateTimeField(auto_now_add=True)
 

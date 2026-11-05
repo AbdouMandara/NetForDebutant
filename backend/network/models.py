@@ -1,8 +1,20 @@
 from django.db import models
 import uuid
 from django.utils import timezone
+from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
+class User(AbstractUser):
+    photo = models.ImageField(
+        upload_to="users/avatars/",
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return self.username
+
+    
 class Difficulty(models.Model):
     EASY = 'Easy', 'Easy'
     MEDIUM = 'Medium', 'Medium'

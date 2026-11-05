@@ -1,0 +1,38 @@
+from network.models import Category, Notion, Question, Utilisateur, Answer
+from rest_framework import serializers
+
+class UtilisateurSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Utilisateur
+        fields = ['id', 'username', 'email', 'photo']
+        read_only_fields = ['id']
+
+class NotionSerializer(serializers.ModelSerializer):
+    questions = serializers.SerializerMethodField()
+    class Meta:
+        model = Notion
+        fields = ['id', 'title', 'slug', 'description', 'is_published', 'photo', 'created_at', 'updated_at', 'questions']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class CategorySerializer(serializers.ModelSerializer):
+    notions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['name', 'description', 'slug', 'created_at', 'updated_at', 'notions']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class QuestionSerializer(serializers.ModelSerializer):
+    answers = serializers.SerializerMethodField()
+    class Meta:
+        model = Question
+        fields = ['id', 'question_text', 'explication', 'created_at', 'updated_at', 'answers']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = ['id', 'answer_text', 'is_correct', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+

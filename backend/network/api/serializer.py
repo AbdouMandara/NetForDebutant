@@ -1,4 +1,4 @@
-from network.models import Category, Notion, Question, Utilisateur, Answer
+from network.models import Category, Notion, Question, Utilisateur, Answer, Difficulty
 from rest_framework import serializers
 
 class UtilisateurSerializer(serializers.ModelSerializer):
@@ -31,17 +31,28 @@ class CategorySerializer(serializers.ModelSerializer):
         notions = obj.notion_set.all()
         serializer = NotionSerializer(notions, many=True)
         return serializer.data
-    
+
+class DifficultySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Difficulty
+        fields = ['id', 'name', 'description']
+        read_only_fields = ['id']
+
 class QuestionSerializer(serializers.ModelSerializer):
     answers = serializers.SerializerMethodField()
     class Meta:
         model = Question
-        fields = ['id', 'question_text', 'explication', 'created_at', 'updated_at', 'answers']
+        fields = ['id', 'question_text', 'explication', 'created_at', 'updated_at', 'answers', 'difficulty']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_answers_of_question(self, obj):
         answers = obj.answers.all() # je mets answer car j'ai mis related_name='answers' dans le modèle Answer pour la relation ForeignKey avec Question
         serializer = AnswerSerializer(answers, many=True)
+        return serializer.data
+
+    def get_difficulty_of_question(self, obj):
+        difficulty = obj.difficulty
+        serializer = DifficultySerializer(difficulty)
         return serializer.data
     
 class AnswerSerializer(serializers.ModelSerializer):

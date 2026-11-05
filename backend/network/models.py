@@ -28,7 +28,7 @@ class Notion(models.Model):
     description = models.TextField(blank=True, null=True)
     is_published = models.BooleanField(default=False)
     photo = models.ImageField(
-        upload_to="users/avatars/",
+        upload_to="users/photo_notions/",
         blank=True,
         null=True
     )

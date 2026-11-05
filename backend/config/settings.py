@@ -31,7 +31,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Third-party apps
+    'rest_framework',
+
+    # Local apps
+    'network'
 ]
+# permet de remplacer le modèle par défaut par le tien.
+AUTH_USER_MODEL = "network.Utilisateur"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

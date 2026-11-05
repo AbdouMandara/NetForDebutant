@@ -1,10 +1,11 @@
 from django.db import models
 import uuid
-from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
     
+
+
 class Difficulty(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=20, unique=True)
@@ -19,7 +20,7 @@ class Category(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     slug = models.SlugField(unique=True)
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -32,11 +33,11 @@ class Notion(models.Model):
     description = models.TextField(blank=True, null=True)
     is_published = models.BooleanField(default=False)
     photo = models.ImageField(
-        upload_to="users/photo_notions/",
+        upload_to="notions/photos/",
         blank=True,
         null=True
     )
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     #Relationships
@@ -50,7 +51,7 @@ class Question(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     question_text = models.CharField(max_length=200)
     explication = models.TextField(blank=False, null=False)
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # Relationships
@@ -67,7 +68,6 @@ class Utilisateur(AbstractUser):
         blank=True,
         null=True
     )
-    questions = models.ManyToManyField(Question, related_name='users')
     def __str__(self):
         return self.username
         
@@ -77,8 +77,40 @@ class Answer(models.Model):
     answer_text = models.CharField(max_length=200)
     is_correct = models.BooleanField(default=False)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.answer_text
+
+
+
+class TentativeQuestion(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    user = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.CASCADE,
+        related_name="tentatives"
+    )
+
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.PROTECT,
+        related_name="tentatives"
+    )
+
+    selected_answer = models.ForeignKey(
+        Answer,
+        on_delete=models.PROTECT,
+        related_name="tentatives"
+    )
+
+    answered_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.question.question_text}"

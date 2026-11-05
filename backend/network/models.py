@@ -57,13 +57,13 @@ class Question(models.Model):
         return self.question_text
 
 
-class User(AbstractUser):
+class Utilisateur(AbstractUser):
     photo = models.ImageField(
         upload_to="users/avatars/",
         blank=True,
         null=True
     )
-    questions = models.ManyToManyField(Question, through='Participation', related_name='users')
+    questions = models.ManyToManyField(Question, related_name='users')
     def __str__(self):
         return self.username
         

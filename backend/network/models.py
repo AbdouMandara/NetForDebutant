@@ -6,10 +6,13 @@ from django.contrib.auth.models import AbstractUser
 # Create your models here.
     
 class Difficulty(models.Model):
-    EASY = 'Easy', 'Easy'
-    MEDIUM = 'Medium', 'Medium'
-    HARD = 'Hard', 'Hard'
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=20, unique=True)
 
+    def __str__(self):
+        return self.name
+
+    
 class Category(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)

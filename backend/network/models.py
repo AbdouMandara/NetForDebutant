@@ -18,3 +18,12 @@ class Question(models.Model):
 
     def __str__(self):
         return self.question_text
+
+class Answer(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    answer_text = models.CharField(max_length=200)
+    is_correct = models.BooleanField(default=False)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
+
+    def __str__(self):
+        return self.answer_text

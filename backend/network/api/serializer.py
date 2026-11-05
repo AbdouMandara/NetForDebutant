@@ -40,7 +40,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_answers_of_question(self, obj):
-        answers = obj.answers_set.all()
+        answers = obj.answers.all() # je mets answer car j'ai mis related_name='answers' dans le modèle Answer pour la relation ForeignKey avec Question
         serializer = AnswerSerializer(answers, many=True)
         return serializer.data
     

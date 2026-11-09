@@ -5,7 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 class UtilisateurSerializer(serializers.ModelSerializer):
     class Meta:
         model = Utilisateur
-        fields = ['id', 'username', 'email', 'photo']
+        fields = ['username', 'email', 'photo', 'date_joined', 'last_login', 'is_active']
         read_only_fields = ['id']
 
 class NotionSerializer(serializers.ModelSerializer):

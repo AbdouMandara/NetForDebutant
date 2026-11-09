@@ -99,6 +99,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Config qui va permettre de gérer l'authentification par JWT (JSON Web Token) pour notre API Django REST Framework donc DRF vérifie automatiquement le JWT lorsqu'une requête arrive sur un endpoint protégé.
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

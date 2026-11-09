@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
-
+from network import routers
 urlpatterns = [
-    path('', include('network.routers.')),
+    path('', include(routers.urlpatterns))
 ]
 
 if settings.DEBUG:

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('network', '0002_remove_utilisateur_questions_alter_notion_photo_and_more'),
+        ('network', '0002_remove_utilisateur_questions_utilisateur_google_sub_and_more'),
     ]
 
     operations = [

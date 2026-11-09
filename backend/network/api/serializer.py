@@ -1,5 +1,6 @@
 from network.models import Category, Notion, Question, Utilisateur, Answer, Difficulty, TentativeQuestion
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 
 class UtilisateurSerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,3 +67,30 @@ class TentativeQuestionSerializer(serializers.ModelSerializer):
         model = TentativeQuestion
         fields = ['id', 'user', 'question', 'selected_answer', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+# Serializer pour l'auth (celui de base pour l'inscription et la connexion a travers oAUth de Google, pour le login, refresh token, logout etc, on va utiliser les serializer du package django-rest-framework-simplejwt)
+
+class RegisterSerializer(serializers.ModelSerializer):
+
+    # Je declare Mes regles de validation personnalisees ici
+    password = serializers.CharField(
+        write_only=True, #Ce n'est pas pour la lecture donc l'api ne l'expose pas, seulement pour l'ecriture
+        validators=[validate_password], #Je mets la fonction de validation de mot de passe de Django pour que le mot de passe respecte les regles de securite
+    )
+
+    class Meta:
+        model = Utilisateur
+        fields = ['id', 'username', 'password']
+        read_only_fields = ['id']
+
+    def create(self, validated_data):
+        return Utilisateur.objects.create_user(**validated_data)
+
+
+class GoogleAuthSerializer(serializers.Serializer):
+    # On prend ca car c'est ce que Google nous renvoie apres l'authentification de l'utilisateur
+    id_token = serializers.CharField(
+        write_only=True,
+        trim_whitespace=True #supprimer automatiquement les espaces au début et à la fin de la valeur reçue
+    )

@@ -7,17 +7,21 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
-
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class UserViewSet(ModelViewSet): 
     serializer_class = UtilisateurSerializer
     queryset = Utilisateur.objects.all()
 
 class AuthViewSet(viewsets.GenericViewSet):
+    permission_classes = [AllowAny]
 
-    def get_auth_response(self, utilisateur, message, status_code):
-        refresh = RefreshToken.for_user(utilisateur)
+    def get_auth_response(self, utilisateur, message, status_code, refresh=None):
+        if refresh is None:
+            refresh = RefreshToken.for_user(utilisateur)
+
         access = refresh.access_token
+
         data = {
             "message": message,
             "user": {
@@ -25,23 +29,16 @@ class AuthViewSet(viewsets.GenericViewSet):
             },
         }
 
-        # Si le client est mobile, on renvoie le refresh token dans la réponse JSON, sinon on le met dans un cookie httpOnly pour les clients web.
         if self.request.headers.get("X-Client-Type") == "mobile":
             data["access"] = str(access)
             data["refresh"] = str(refresh)
-
             return Response(data, status=status_code)
 
-        # Si le client est web, on renvoie le refresh token dans un cookie httpOnly pour plus de sécurité, et l'access token dans la réponse JSON.
         response = Response(
-            {
-                **data,
-                "access": str(access)
-            },
+            {**data, "access": str(access)},
             status=status_code
         )
 
-        # C'est pour mettre le refresh token dans un cookie httpOnly pour les clients web, ce qui est plus sécurisé que de le renvoyer dans la réponse JSON.
         response.set_cookie(
             key="refresh_token",
             value=str(refresh),
@@ -50,8 +47,9 @@ class AuthViewSet(viewsets.GenericViewSet):
             samesite="Lax",
             path="/api/auth/",
         )
+
         return response
-    permission_classes = [AllowAny]
+
 
 
     # Pour l'inscription
@@ -67,4 +65,20 @@ class AuthViewSet(viewsets.GenericViewSet):
             utilisateur=user,
             message="Inscription réussie.",
             status_code=status.HTTP_201_CREATED,
+        )
+
+    # Pour la connexion
+    @action(detail=False, methods=["post"])
+    def login(self, request):
+        serializer = TokenObtainPairSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        refresh = serializer.validated_data["refresh"]
+        utilisateur = serializer.user
+
+        return self.get_auth_response(
+            utilisateur=utilisateur,
+            message="Connexion réussie.",
+            status_code=status.HTTP_200_OK,
+            refresh=RefreshToken(refresh),
         )

@@ -68,7 +68,7 @@ class TentativeQuestionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
-# Serializer pour l'auth
+# Serializer pour l'auth (celui de base pour l'inscription et la connexion a travers oAUth de Google, pour le login, refresh token, logout etc, on va utiliser les serializer du package django-rest-framework-simplejwt)
 
 class RegisterSerializer(serializers.ModelSerializer):
 
@@ -85,3 +85,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return Utilisateur.objects.create_user(**validated_data)
+
+
+class GoogleAuthSerializer(serializers.Serializer):
+    # On prend ca car c'est ce que Google nous renvoie apres l'authentification de l'utilisateur
+    id_token = serializers.CharField(
+        write_only=True,
+        trim_whitespace=True #supprimer automatiquement les espaces au début et à la fin de la valeur reçue
+    )

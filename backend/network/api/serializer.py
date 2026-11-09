@@ -66,3 +66,22 @@ class TentativeQuestionSerializer(serializers.ModelSerializer):
         model = TentativeQuestion
         fields = ['id', 'user', 'question', 'selected_answer', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+# Serializer pour l'auth
+
+class RegisterSerializer(serializers.ModelSerializer):
+
+    # Je declare Mes regles de validation personnalisees ici
+    password = serializers.CharField(
+        write_only=True, #Ce n'est pas pour la lecture donc l'api ne l'expose pas, seulement pour l'ecriture
+        min_length=8
+    )
+
+    class Meta:
+        model = Utilisateur
+        fields = ['id', 'username', 'password']
+        read_only_fields = ['id']
+
+    def create(self, validated_data):
+        return Utilisateur.objects.create_user(**validated_data)

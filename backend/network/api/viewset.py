@@ -21,7 +21,6 @@ class AuthViewSet(viewsets.GenericViewSet):
         data = {
             "message": message,
             "user": {
-                "id": utilisateur.id,
                 "username": utilisateur.username,
             },
         }
@@ -63,13 +62,9 @@ class AuthViewSet(viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        return Response(
-            {
-                'message': 'Inscription réussie.',
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                }
-            },
-            status=status.HTTP_201_CREATED
+
+        return self.get_auth_response(
+            utilisateur=user,
+            message="Inscription réussie.",
+            status_code=status.HTTP_201_CREATED,
         )

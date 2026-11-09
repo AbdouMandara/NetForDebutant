@@ -1,5 +1,6 @@
 from network.models import Category, Notion, Question, Utilisateur, Answer, Difficulty, TentativeQuestion
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 
 class UtilisateurSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,7 +76,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     # Je declare Mes regles de validation personnalisees ici
     password = serializers.CharField(
         write_only=True, #Ce n'est pas pour la lecture donc l'api ne l'expose pas, seulement pour l'ecriture
-        min_length=8
+        validators=[validate_password], #Je mets la fonction de validation de mot de passe de Django pour que le mot de passe respecte les regles de securite
     )
 
     class Meta:

@@ -64,6 +64,7 @@ class Question(models.Model):
 
 class Utilisateur(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
     photo = models.ImageField(
         upload_to="users/avatars/",
         blank=True,

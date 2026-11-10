@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from network.services.google_oauth import verify_google_id_token
-
+from rest_framework.throttling import ScopedRateThrottle
 
 class UserViewSet(ModelViewSet): 
     serializer_class = UtilisateurSerializer
@@ -57,8 +57,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
 
     # Pour l'inscription
-    @action(detail=False, methods=['post'])
-    
+    @action(detail=False, methods=['post'], throttle_classes=[ScopedRateThrottle], throttle_scope="auth_register")
     def register(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -72,7 +71,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
     # Pour la connexion
-    @action(detail=False, methods=["post"])
+    @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle], throttle_scope="auth_login")
     def login(self, request):
         serializer = TokenObtainPairSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -87,7 +86,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             refresh=RefreshToken(refresh),
         )
 
-    @action(detail=False, methods=["post"])
+    @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle], throttle_scope="auth_google")
     def google_oauth(self, request):
         serializer = GoogleAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

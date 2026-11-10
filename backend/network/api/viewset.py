@@ -59,7 +59,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             httponly=True,
             secure=True,
             samesite="Lax",
-            path="/api/auth/",
+            path="/api/v1/auth/",
         )
 
         return response
@@ -89,7 +89,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         refresh = serializer.validated_data["refresh"]
         utilisateur = serializer.user
-
+        
         return self.get_auth_response(
             utilisateur=utilisateur,
             message="Connexion réussie.",
@@ -209,8 +209,9 @@ class AuthViewSet(viewsets.GenericViewSet):
         if not is_mobile:
             response.delete_cookie(
                 key="refresh_token",
-                path="/api/auth/",
+                path="/api/v1/auth/",
                 samesite="Lax",
             )
-
+        print("CLIENT :", request.headers.get("X-Client-Type"))
+        print("REFRESH TOKEN :", refresh_token)
         return response

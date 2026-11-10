@@ -2,7 +2,7 @@ from django.db import IntegrityError, transaction
 from rest_framework import viewsets
 from network.models import Difficulty, Category, Notion, Question, Utilisateur, Answer, TentativeQuestion
 from rest_framework_simplejwt.tokens import RefreshToken
-from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, TentativeQuestionSerializer, GoogleAuthSerializer
+from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, TentativeQuestionSerializer, GoogleAuthSerializer, LogoutSerializer
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -57,8 +57,9 @@ class AuthViewSet(viewsets.GenericViewSet):
 
 
     # Pour l'inscription
-    @action(detail=False, methods=['post'], throttle_classes=[ScopedRateThrottle], throttle_scope="auth_register")
+    @action(detail=False, methods=['post'], throttle_classes=[ScopedRateThrottle])
     def register(self, request):
+        self.throttle_scope = "auth_register"
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -71,8 +72,9 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
     # Pour la connexion
-    @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle], throttle_scope="auth_login")
+    @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def login(self, request):
+        self.throttle_scope = "auth_login"
         serializer = TokenObtainPairSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -86,8 +88,9 @@ class AuthViewSet(viewsets.GenericViewSet):
             refresh=RefreshToken(refresh),
         )
 
-    @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle], throttle_scope="auth_google")
+    @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def google_oauth(self, request):
+        self.throttle_scope = "auth_google"
         serializer = GoogleAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

@@ -1,3 +1,4 @@
+from django.db import IntegrityError, transaction
 from rest_framework import viewsets
 from network.models import Difficulty, Category, Notion, Question, Utilisateur, Answer, TentativeQuestion
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -86,38 +87,83 @@ class AuthViewSet(viewsets.GenericViewSet):
             refresh=RefreshToken(refresh),
         )
 
-    # AUth avec Google OAuth
     @action(detail=False, methods=["post"])
     def google_oauth(self, request):
         serializer = GoogleAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        id_token = serializer.validated_data["id_token"]
-        google_user_info = verify_google_id_token(id_token)
-        email = google_user_info.get("email")
-        username = google_user_info.get("name")
-        google_sub = google_user_info.get("sub")
+        token = serializer.validated_data["id_token"]
+
+        try:
+            google_user_info = verify_google_id_token(token)
+        except ValueError:
+            return Response(
+                {"detail": "Jeton Google invalide ou expiré."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        google_sub = google_user_info["sub"]
+        email = google_user_info["email"]
+        username = google_user_info.get("name") or email.split("@")[0]
         photo = google_user_info.get("picture")
 
+        if google_user_info.get("email_verified") is not True:
+            return Response(
+                {"detail": "L'adresse e-mail Google n'est pas vérifiée."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 1. Rechercher un compte Google existant
         utilisateur = Utilisateur.objects.filter(
             google_sub=google_sub
         ).first()
 
-        if not utilisateur:
-            utilisateur = Utilisateur.objects.create(
-                username=username,
-                email=email,
-                google_sub=google_sub,
-                photo=photo
-            )
+        if utilisateur:
             return self.get_auth_response(
                 utilisateur=utilisateur,
-                message="Inscription via Google OAuth réussie.",
-                status_code=status.HTTP_201_CREATED,
+                message="Connexion via Google réussie.",
+                status_code=status.HTTP_200_OK,
             )
 
+        # 2. Vérifier si l'e-mail appartient déjà à un compte
+        if Utilisateur.objects.filter(email=email).exists():
+            return Response(
+                {
+                    "detail": (
+                        "Un compte existe déjà avec cette adresse e-mail. "
+                        "Connectez-vous avec votre méthode habituelle "
+                        "pour associer votre compte Google."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # 3. Créer un nouvel utilisateur
+        try:
+            with transaction.atomic():
+                utilisateur = Utilisateur.objects.create_user(
+                    username=username,
+                    email=email,
+                    google_sub=google_sub,
+                    photo=photo,
+                )
+                utilisateur.set_unusable_password()
+                utilisateur.save(update_fields=["password"])
+
+        except IntegrityError:
+            return Response(
+                {
+                    "detail": (
+                        "Un compte avec ces informations existe déjà. "
+                        "Réessayez de vous connecter."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # 4. Générer les JWT
         return self.get_auth_response(
             utilisateur=utilisateur,
-            message="Connexion via Google OAuth réussie.",
-            status_code=status.HTTP_200_OK,
+            message="Inscription via Google réussie.",
+            status_code=status.HTTP_201_CREATED,
         )

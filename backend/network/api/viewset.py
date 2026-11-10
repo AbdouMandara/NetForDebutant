@@ -169,3 +169,39 @@ class AuthViewSet(viewsets.GenericViewSet):
             message="Inscription via Google réussie.",
             status_code=status.HTTP_201_CREATED,
         )
+
+
+    @action(
+    detail=False,
+    methods=["post"],
+    permission_classes=[AllowAny],
+    authentication_classes=[],
+)
+    def logout(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+
+        refresh_token = (
+            request.data.get("refresh")
+            if is_mobile
+            else request.COOKIES.get("refresh_token")
+        )
+
+        serializer = LogoutSerializer(
+            data={"refresh": refresh_token}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        response = Response(
+            {"message": "Déconnexion réussie."},
+            status=status.HTTP_200_OK,
+        )
+
+        if not is_mobile:
+            response.delete_cookie(
+                key="refresh_token",
+                path="/api/auth/",
+                samesite="Lax",
+            )
+
+        return response

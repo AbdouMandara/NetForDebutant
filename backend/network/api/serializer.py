@@ -1,6 +1,9 @@
 from network.models import Category, Notion, Question, Utilisateur, Answer, Difficulty, TentativeQuestion
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+
 
 class UtilisateurSerializer(serializers.ModelSerializer):
     class Meta:
@@ -94,3 +97,22 @@ class GoogleAuthSerializer(serializers.Serializer):
         write_only=True,
         trim_whitespace=True #supprimer automatiquement les espaces au début et à la fin de la valeur reçue
     )
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(
+        write_only=True,
+        trim_whitespace=True,
+    )
+
+    def validate_refresh(self, value):
+        try:
+            self.token = RefreshToken(value)
+        except TokenError:
+            raise serializers.ValidationError(
+                "Le refresh token est invalide ou expiré."
+            )
+        return value
+
+    def save(self, **kwargs):
+        self.token.blacklist()

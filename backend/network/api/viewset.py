@@ -18,7 +18,17 @@ class UserViewSet(ModelViewSet):
 
 class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = [AllowAny]
+    # Necessaire pour afficher dans la documentation de l'API
+    def get_serializer_class(self):
+        serializers = {
+            "register": RegisterSerializer,
+            "login": TokenObtainPairSerializer,
+            "google_oauth": GoogleAuthSerializer,
+            "logout": LogoutSerializer,
+        }
 
+        return serializers.get(self.action)
+    
     def get_auth_response(self, utilisateur, message, status_code, refresh=None):
         if refresh is None:
             refresh = RefreshToken.for_user(utilisateur)
@@ -53,7 +63,6 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
         return response
-
 
 
     # Pour l'inscription

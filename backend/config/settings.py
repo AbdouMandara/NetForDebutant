@@ -17,7 +17,8 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-
+# Lien avec Google pour l'authentification via Google OAuth2.0 pour le web et android
+GOOGLE_ID_CLIENT_FOR_WEB = env("GOOGLE_ID_CLIENT_FOR_WEB")
 ALLOWED_HOSTS = env.list(
     'ALLOWED_HOSTS'
 )

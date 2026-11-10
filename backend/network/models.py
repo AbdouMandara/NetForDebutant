@@ -79,7 +79,9 @@ class Utilisateur(AbstractUser):
 
     # Definition de "email" comme champ d'identification principal pour l'authentification
     USERNAME_FIELD = "email"
-
+    # Indique que le champ "username" est requis lors de la création d'un utilisateur
+    REQUIRED_FIELDS = ["username"]
+    
     def __str__(self):
         return self.username
         

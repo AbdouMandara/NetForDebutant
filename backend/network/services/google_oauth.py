@@ -14,4 +14,13 @@ def verify_google_id_token(token):
     except ValueError:
         raise ValueError("Le jeton Google est invalide ou expiré.")
 
+    if not id_info.get("sub"):
+        raise ValueError("Identifiant Google manquant.")
+
+    if not id_info.get("email"):
+        raise ValueError("Adresse e-mail manquante.")
+
+    if id_info.get("email_verified") is not True:
+        raise ValueError("L'adresse e-mail Google n'est pas vérifiée.")
+
     return id_info

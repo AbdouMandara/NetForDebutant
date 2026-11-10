@@ -76,6 +76,10 @@ class Utilisateur(AbstractUser):
         null=True,
         blank=True
     )
+
+    # Definition de "email" comme champ d'identification principal pour l'authentification
+    USERNAME_FIELD = "email"
+
     def __str__(self):
         return self.username
         

@@ -17,7 +17,8 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-
+# Lien avec Google pour l'authentification via Google OAuth2.0 pour le web et android
+GOOGLE_ID_CLIENT_FOR_WEB = env('GOOGLE_ID_CLIENT_FOR_WEB')
 ALLOWED_HOSTS = env.list(
     'ALLOWED_HOSTS'
 )
@@ -99,10 +100,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Config qui va permettre de gérer l'authentification par JWT (JSON Web Token) pour notre API Django REST Framework donc DRF vérifie automatiquement le JWT lorsqu'une requête arrive sur un endpoint protégé.
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "auth_login": "5/minute",
+        "auth_register": "3/hour",
+        "auth_google": "10/minute",
+    },
 }
 
 from datetime import timedelta

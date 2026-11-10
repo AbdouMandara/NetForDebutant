@@ -63,6 +63,8 @@ class Question(models.Model):
 
 
 class Utilisateur(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
     photo = models.ImageField(
         upload_to="users/avatars/",
         blank=True,
@@ -74,6 +76,12 @@ class Utilisateur(AbstractUser):
         null=True,
         blank=True
     )
+
+    # Definition de "email" comme champ d'identification principal pour l'authentification
+    USERNAME_FIELD = "email"
+    # Indique que le champ "username" est requis lors de la création d'un utilisateur
+    REQUIRED_FIELDS = ["username"]
+    
     def __str__(self):
         return self.username
         

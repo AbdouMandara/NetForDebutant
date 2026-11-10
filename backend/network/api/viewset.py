@@ -26,6 +26,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             "message": message,
             "user": {
                 "username": utilisateur.username,
+                "email": utilisateur.email,
             },
         }
 

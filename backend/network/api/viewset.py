@@ -180,12 +180,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
 
-    @action(
-    detail=False,
-    methods=["post"],
-    permission_classes=[AllowAny],
-    authentication_classes=[],
-)
+    @action( detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
     def logout(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
 
@@ -215,3 +210,49 @@ class AuthViewSet(viewsets.GenericViewSet):
         print("CLIENT :", request.headers.get("X-Client-Type"))
         print("REFRESH TOKEN :", refresh_token)
         return response
+
+
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[],throttle_classes=[ScopedRateThrottle],)
+    def refresh(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+
+        refresh_token = (
+            request.data.get("refresh")
+            if is_mobile
+            else request.COOKIES.get("refresh_token")
+        )
+
+        if not refresh_token:
+            return Response(
+                {"detail": "Refresh token manquant."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = CustomTokenRefreshSerializer(
+            data={"refresh": refresh_token}
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        tokens = serializer.validated_data
+
+        if is_mobile:
+            return Response(tokens, status=status.HTTP_200_OK)
+
+        response = Response(
+            {"access": tokens["access"]},
+            status=status.HTTP_200_OK,
+        )
+
+        if "refresh" in tokens:
+            response.set_cookie(
+                key="refresh_token",
+                value=tokens["refresh"],
+                httponly=True,
+                secure=True,
+                samesite="Lax",
+                path="/api/v1/auth/",
+            )
+
+        return response
+

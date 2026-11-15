@@ -196,7 +196,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
 
-    @action( detail=False, methods=["post"], permission_classes=[IsAuthenticated], authentication_classes=[])
+    @action( detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
     def logout(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
 

@@ -7,15 +7,30 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from network.services.google_oauth import verify_google_id_token
 from rest_framework.throttling import ScopedRateThrottle
 
 
-class UserViewSet(ModelViewSet): 
+class UserViewSet(ModelViewSet):
     serializer_class = UtilisateurSerializer
-    queryset = Utilisateur.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_staff:
+            return Utilisateur.objects.all()
+
+        return Utilisateur.objects.filter(id=user.id)
+
+    def get_permissions(self):
+        if self.action in ["create", "destroy"]:
+            if not self.request.user.is_staff:
+                return [IsAdminUser()]
+
+        return [IsAuthenticated()]
 
 class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = [AllowAny]
@@ -181,7 +196,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
 
-    @action( detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
+    @action( detail=False, methods=["post"], permission_classes=[IsAuthenticated], authentication_classes=[])
     def logout(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
 
@@ -216,7 +231,8 @@ class AuthViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[],throttle_classes=[ScopedRateThrottle],)
     def refresh(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
-
+        print("COOKIES :", request.COOKIES)
+        print("HEADERS :", request.headers)
         refresh_token = (
             request.data.get("refresh")
             if is_mobile

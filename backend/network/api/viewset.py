@@ -14,6 +14,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
+from django.middleware.csrf import CsrfViewMiddleware
+from rest_framework.exceptions import PermissionDenied
 
 class UserViewSet(ModelViewSet):
     serializer_class = UtilisateurSerializer
@@ -287,3 +289,27 @@ class AuthViewSet(viewsets.GenericViewSet):
         return Response({
             "csrfToken": get_token(request)
         })
+
+# Elle servira au niveau de la verif du csrf
+class CSRFCheck(CsrfViewMiddleware):
+    def _reject(self, request, reason):
+        return reason
+
+
+def enforce_csrf(request):
+    django_request = request._request
+
+    check = CSRFCheck(lambda request: None)
+    check.process_request(django_request) #prépare la vérification du token transmis dans l'en-tete
+
+    reason = check.process_view(
+        django_request,
+        None,
+        (),
+        {},
+    ) #vérifie le cookie et le token transmis dans l'en-tête du front-end
+
+    if reason:
+        raise PermissionDenied(
+            f"Verification CSRF a echoue car : {reason}"
+        )

@@ -8,9 +8,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from network.services.google_oauth import verify_google_id_token
 from rest_framework.throttling import ScopedRateThrottle
+
 
 class UserViewSet(ModelViewSet): 
     serializer_class = UtilisateurSerializer
@@ -228,7 +229,7 @@ class AuthViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = CustomTokenRefreshSerializer(
+        serializer = TokenRefreshSerializer(
             data={"refresh": refresh_token}
         )
 

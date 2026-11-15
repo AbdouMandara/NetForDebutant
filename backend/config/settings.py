@@ -157,9 +157,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True #autorise les requêtes avec cookies.
 
 CSRF_TRUSTED_ORIGINS = [
     "https://netfordebutant.com",
     "http://localhost:5173",
 ]
+
+# Config de mon cookie
+CSRF_COOKIE_SECURE = not DEBUG #Car nous sommes encore en local
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = True

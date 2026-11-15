@@ -11,7 +11,9 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from network.services.google_oauth import verify_google_id_token
 from rest_framework.throttling import ScopedRateThrottle
-
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 
 class UserViewSet(ModelViewSet):
     serializer_class = UtilisateurSerializer
@@ -273,3 +275,15 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         return response
 
+# Creation de l'endpoint utilisable par le front-end pour avoir le cookie CSRF
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[AllowAny],
+        authentication_classes=[],
+    )
+    @method_decorator(ensure_csrf_cookie)
+    def csrf_token(self, request):
+        return Response({
+            "csrfToken": get_token(request)
+        })

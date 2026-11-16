@@ -66,10 +66,38 @@ class AnswerSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 class TentativeQuestionSerializer(serializers.ModelSerializer):
+    is_correct = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = TentativeQuestion
-        fields = ['id', 'user', 'question', 'selected_answer', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'user', 'question', 'selected_answer', 'answered_at', 'is_correct']
+        read_only_fields = ['id', 'user', 'answered_at', 'is_correct']
+
+    def get_is_correct(self, obj):
+        return obj.selected_answer.is_correct if obj.selected_answer else False
+
+    def validate(self, data):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+
+        question = data.get('question') or getattr(self.instance, 'question', None)
+        selected_answer = data.get('selected_answer') or getattr(self.instance, 'selected_answer', None)
+
+        if question and selected_answer and selected_answer.question_id != question.id:
+            raise serializers.ValidationError(
+                {"selected_answer": "Cette réponse n'appartient pas à la question sélectionnée."}
+            )
+
+        if user and question:
+            queryset = TentativeQuestion.objects.filter(user=user, question=question)
+            if self.instance:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            if queryset.exists():
+                raise serializers.ValidationError(
+                    {"question": "Vous avez déjà tenté cette question."}
+                )
+
+        return data
 
 
 # Serializer pour l'auth (celui de base pour l'inscription et la connexion a travers oAUth de Google, pour le login, refresh token, logout etc, on va utiliser les serializer du package django-rest-framework-simplejwt)

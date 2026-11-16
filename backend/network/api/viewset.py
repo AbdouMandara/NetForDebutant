@@ -38,6 +38,31 @@ class UserViewSet(ModelViewSet):
 
         return [IsAuthenticated()]
 
+        
+# Elle servira au niveau de la verif du csrf
+class CSRFCheck(CsrfViewMiddleware):
+    def _reject(self, request, reason):
+        return reason
+
+
+def enforce_csrf(request):
+    django_request = request._request
+
+    check = CSRFCheck(lambda request: None)
+    check.process_request(django_request) #prépare la vérification du token transmis dans l'en-tete
+
+    reason = check.process_view(
+        django_request,
+        None,
+        (),
+        {},
+    ) #vérifie le cookie et le token transmis dans l'en-tête du front-end
+
+    if reason:
+        raise PermissionDenied(
+            f"Verification CSRF a echoue car : {reason}"
+        )
+    
 class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = [AllowAny]
     # Necessaire pour afficher dans la documentation de l'API
@@ -311,26 +336,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             "csrfToken": get_token(request)
         })
 
-# Elle servira au niveau de la verif du csrf
-class CSRFCheck(CsrfViewMiddleware):
-    def _reject(self, request, reason):
-        return reason
-
-
-def enforce_csrf(request):
-    django_request = request._request
-
-    check = CSRFCheck(lambda request: None)
-    check.process_request(django_request) #prépare la vérification du token transmis dans l'en-tete
-
-    reason = check.process_view(
-        django_request,
-        None,
-        (),
-        {},
-    ) #vérifie le cookie et le token transmis dans l'en-tête du front-end
-
-    if reason:
-        raise PermissionDenied(
-            f"Verification CSRF a echoue car : {reason}"
-        )
+class CategoryViewSet(ModelViewSet):
+    serializer_class = CategorySerializer
+    queryset = Category.objects.all()
+    permission_classes = [IsAuthenticated]

@@ -7,14 +7,36 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from network.services.google_oauth import verify_google_id_token
 from rest_framework.throttling import ScopedRateThrottle
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
+from django.middleware.csrf import CsrfViewMiddleware
+from rest_framework.exceptions import PermissionDenied
+from rest_framework_simplejwt.exceptions import TokenError
 
-class UserViewSet(ModelViewSet): 
+
+class UserViewSet(ModelViewSet):
     serializer_class = UtilisateurSerializer
-    queryset = Utilisateur.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_staff:
+            return Utilisateur.objects.all()
+
+        return Utilisateur.objects.filter(id=user.id)
+
+    def get_permissions(self):
+        if self.action in ["create", "destroy"]:
+            if not self.request.user.is_staff:
+                return [IsAdminUser()]
+
+        return [IsAuthenticated()]
 
 class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = [AllowAny]
@@ -68,6 +90,10 @@ class AuthViewSet(viewsets.GenericViewSet):
     # Pour l'inscription
     @action(detail=False, methods=['post'], throttle_classes=[ScopedRateThrottle])
     def register(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+        if not is_mobile:
+            enforce_csrf(request)
+
         self.throttle_scope = "auth_register"
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -83,6 +109,10 @@ class AuthViewSet(viewsets.GenericViewSet):
     # Pour la connexion
     @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def login(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+        if not is_mobile:
+            enforce_csrf(request)
+
         self.throttle_scope = "auth_login"
         serializer = TokenObtainPairSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -99,6 +129,10 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def google_oauth(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+        if not is_mobile:
+            enforce_csrf(request)
+
         self.throttle_scope = "auth_google"
         serializer = GoogleAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -180,15 +214,11 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
 
-    @action(
-    detail=False,
-    methods=["post"],
-    permission_classes=[AllowAny],
-    authentication_classes=[],
-)
+    @action( detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
     def logout(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
-
+        if not is_mobile:
+            enforce_csrf(request)
         refresh_token = (
             request.data.get("refresh")
             if is_mobile
@@ -212,6 +242,95 @@ class AuthViewSet(viewsets.GenericViewSet):
                 path="/api/v1/auth/",
                 samesite="Lax",
             )
-        print("CLIENT :", request.headers.get("X-Client-Type"))
-        print("REFRESH TOKEN :", refresh_token)
         return response
+
+    # Pour refresh le token
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[],throttle_classes=[ScopedRateThrottle],)
+    def refresh(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+
+        # Pour verifier le token envoyer par le front-end des appareils depuis web, on va utiliser la fonction de django qui est dans le middleware de django pour verifier le csrf. On va l'utiliser seulement si c'est pas un mobile car pour le mobile, on ne va pas utiliser le cookie csrf mais plutot le token csrf qu'on va envoyer dans l'en-tete du front-end. Donc pour le mobile, on ne va pas verifier le csrf.
+        if not is_mobile:
+            enforce_csrf(request)
+        refresh_token = (
+            request.data.get("refresh")
+            if is_mobile
+            else request.COOKIES.get("refresh_token")
+        )
+
+        if not refresh_token:
+            return Response(
+                {"detail": "Refresh token manquant."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = TokenRefreshSerializer(
+            data={"refresh": refresh_token}
+        )
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError:
+            return Response(
+                {"detail": "Refresh token invalide ou révoqué."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        tokens = serializer.validated_data
+
+        if is_mobile:
+            return Response(tokens, status=status.HTTP_200_OK)
+        
+        response = Response(
+            {"access": tokens["access"]},
+            status=status.HTTP_200_OK,
+        )
+
+        if "refresh" in tokens:
+            response.set_cookie(
+                key="refresh_token",
+                value=tokens["refresh"],
+                httponly=True,
+                secure=True,
+                samesite="Lax",
+                path="/api/v1/auth/",
+            )
+
+        return response
+
+# Creation de l'endpoint utilisable par le front-end pour avoir le cookie CSRF
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[AllowAny],
+        authentication_classes=[],
+    )
+    @method_decorator(ensure_csrf_cookie)
+    def csrf_token(self, request):
+        return Response({
+            "csrfToken": get_token(request)
+        })
+
+# Elle servira au niveau de la verif du csrf
+class CSRFCheck(CsrfViewMiddleware):
+    def _reject(self, request, reason):
+        return reason
+
+
+def enforce_csrf(request):
+    django_request = request._request
+
+    check = CSRFCheck(lambda request: None)
+    check.process_request(django_request) #prépare la vérification du token transmis dans l'en-tete
+
+    reason = check.process_view(
+        django_request,
+        None,
+        (),
+        {},
+    ) #vérifie le cookie et le token transmis dans l'en-tête du front-end
+
+    if reason:
+        raise PermissionDenied(
+            f"Verification CSRF a echoue car : {reason}"
+        )

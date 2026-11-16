@@ -339,4 +339,57 @@ class AuthViewSet(viewsets.GenericViewSet):
 class CategoryViewSet(ModelViewSet):
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
+    permission_classes = [IsAdminUser]
+
+
+class DifficultyViewSet(ModelViewSet):
+    serializer_class = DifficultySerializer
+    queryset = Difficulty.objects.all()
+    permission_classes = [IsAdminUser]
+
+
+class NotionViewSet(ModelViewSet):
+    serializer_class = NotionSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        return Notion.objects.all()
+
+
+class QuestionViewSet(ModelViewSet):
+    serializer_class = QuestionSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        queryset = Question.objects.all()
+        notion_id = self.request.query_params.get("notion")
+        if notion_id:
+            queryset = queryset.filter(notion_id=notion_id)
+        return queryset
+
+
+class AnswerViewSet(ModelViewSet):
+    serializer_class = AnswerSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        queryset = Answer.objects.all()
+        question_id = self.request.query_params.get("question")
+        if question_id:
+            queryset = queryset.filter(question_id=question_id)
+        return queryset
+
+
+class TentativeQuestionViewSet(ModelViewSet):
+    serializer_class = TentativeQuestionSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return TentativeQuestion.objects.all()
+        # Un utilisateur ne voit que ses propres tentatives
+        return TentativeQuestion.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

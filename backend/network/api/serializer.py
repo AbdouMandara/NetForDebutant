@@ -18,7 +18,7 @@ class NotionSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'slug', 'description', 'is_published', 'photo', 'created_at', 'updated_at', 'questions']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-    def get_questions_of_notion(self, obj):
+    def get_questions(self, obj):
         questions = obj.question_set.all()
         serializer = QuestionSerializer(questions, many=True)
         return serializer.data
@@ -31,7 +31,7 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['name', 'description', 'slug', 'created_at', 'updated_at', 'notions']
         read_only_fields = ['id', 'created_at', 'updated_at']
-    def get_notions_of_category(self, obj):
+    def get_notions(self, obj):
         notions = obj.notion_set.all()
         serializer = NotionSerializer(notions, many=True)
         return serializer.data
@@ -49,7 +49,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ['id', 'question_text', 'explication', 'created_at', 'updated_at', 'answers', 'difficulty']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-    def get_answers_of_question(self, obj):
+    def get_answers(self, obj):
         answers = obj.answers.all() # je mets answer car j'ai mis related_name='answers' dans le modèle Answer pour la relation ForeignKey avec Question
         serializer = AnswerSerializer(answers, many=True)
         return serializer.data

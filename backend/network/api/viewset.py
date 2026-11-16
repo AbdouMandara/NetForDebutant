@@ -389,9 +389,9 @@ class TentativeQuestionViewSet(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return TentativeQuestion.objects.all()
-        # Un utilisateur ne voit que ses propres tentatives
-        return TentativeQuestion.objects.filter(user=user)
+            return TentativeQuestion.objects.all().order_by('-answered_at')
+        # Un utilisateur ne voit que ses propres tentatives, les plus récentes d'abord
+        return TentativeQuestion.objects.filter(user=user).order_by('-answered_at')
 
     def perform_create(self, serializer):
         tentative = serializer.save(user=self.request.user)

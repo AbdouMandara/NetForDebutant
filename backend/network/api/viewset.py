@@ -240,8 +240,6 @@ class AuthViewSet(viewsets.GenericViewSet):
                 path="/api/v1/auth/",
                 samesite="Lax",
             )
-        print("CLIENT :", request.headers.get("X-Client-Type"))
-        print("REFRESH TOKEN :", refresh_token)
         return response
 
     # Pour refresh le token
@@ -252,8 +250,6 @@ class AuthViewSet(viewsets.GenericViewSet):
         # Pour verifier le token envoyer par le front-end des appareils depuis web, on va utiliser la fonction de django qui est dans le middleware de django pour verifier le csrf. On va l'utiliser seulement si c'est pas un mobile car pour le mobile, on ne va pas utiliser le cookie csrf mais plutot le token csrf qu'on va envoyer dans l'en-tete du front-end. Donc pour le mobile, on ne va pas verifier le csrf.
         if not is_mobile:
             enforce_csrf(request)
-        print("COOKIES :", request.COOKIES)
-        print("HEADERS :", request.headers)
         refresh_token = (
             request.data.get("refresh")
             if is_mobile

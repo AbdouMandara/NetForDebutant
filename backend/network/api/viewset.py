@@ -88,6 +88,10 @@ class AuthViewSet(viewsets.GenericViewSet):
     # Pour l'inscription
     @action(detail=False, methods=['post'], throttle_classes=[ScopedRateThrottle])
     def register(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+        if not is_mobile:
+            enforce_csrf(request)
+            
         self.throttle_scope = "auth_register"
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -103,6 +107,10 @@ class AuthViewSet(viewsets.GenericViewSet):
     # Pour la connexion
     @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def login(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+        if not is_mobile:
+            enforce_csrf(request)
+
         self.throttle_scope = "auth_login"
         serializer = TokenObtainPairSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -119,6 +127,10 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def google_oauth(self, request):
+        is_mobile = request.headers.get("X-Client-Type") == "mobile"
+        if not is_mobile:
+            enforce_csrf(request)
+
         self.throttle_scope = "auth_google"
         serializer = GoogleAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -16,6 +16,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.middleware.csrf import CsrfViewMiddleware
 from rest_framework.exceptions import PermissionDenied
+from rest_framework_simplejwt.exceptions import TokenError
+
 
 class UserViewSet(ModelViewSet):
     serializer_class = UtilisateurSerializer
@@ -266,7 +268,13 @@ class AuthViewSet(viewsets.GenericViewSet):
             data={"refresh": refresh_token}
         )
 
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError:
+            return Response(
+                {"detail": "Refresh token invalide ou révoqué."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
         tokens = serializer.validated_data
 

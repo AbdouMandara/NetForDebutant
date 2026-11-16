@@ -8,7 +8,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 class UtilisateurSerializer(serializers.ModelSerializer):
     class Meta:
         model = Utilisateur
-        fields = ['username', 'email', 'photo', 'date_joined', 'last_login', 'is_active']
+        fields = ['username', 'email', 'photo', 'score', 'date_joined', 'last_login', 'is_active']
         read_only_fields = ['id']
 
 class NotionSerializer(serializers.ModelSerializer):
@@ -70,8 +70,8 @@ class TentativeQuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TentativeQuestion
-        fields = ['id', 'user', 'question', 'selected_answer', 'answered_at', 'is_correct']
-        read_only_fields = ['id', 'user', 'answered_at', 'is_correct']
+        fields = ['id', 'question', 'selected_answer', 'answered_at', 'is_correct']
+        read_only_fields = ['id', 'answered_at', 'is_correct']
 
     def get_is_correct(self, obj):
         return obj.selected_answer.is_correct if obj.selected_answer else False

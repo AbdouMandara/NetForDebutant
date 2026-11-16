@@ -76,6 +76,7 @@ class Utilisateur(AbstractUser):
         null=True,
         blank=True
     )
+    score = models.IntegerField(default=0)
 
     # Definition de "email" comme champ d'identification principal pour l'authentification
     USERNAME_FIELD = "email"

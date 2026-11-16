@@ -1,4 +1,5 @@
 from django.db import IntegrityError, transaction
+from django.db.models import F
 from rest_framework import viewsets
 from network.models import Difficulty, Category, Notion, Question, Utilisateur, Answer, TentativeQuestion
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -393,4 +394,8 @@ class TentativeQuestionViewSet(ModelViewSet):
         return TentativeQuestion.objects.filter(user=user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        tentative = serializer.save(user=self.request.user)
+        if tentative.selected_answer and tentative.selected_answer.is_correct:
+            Utilisateur.objects.filter(pk=self.request.user.pk).update(
+                score=F('score') + 1
+            )

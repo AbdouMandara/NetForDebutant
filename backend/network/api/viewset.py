@@ -91,7 +91,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
         if not is_mobile:
             enforce_csrf(request)
-            
+
         self.throttle_scope = "auth_register"
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -215,7 +215,8 @@ class AuthViewSet(viewsets.GenericViewSet):
     @action( detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
     def logout(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
-
+        if not is_mobile:
+            enforce_csrf(request)
         refresh_token = (
             request.data.get("refresh")
             if is_mobile

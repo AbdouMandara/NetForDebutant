@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from network.api.permissions import IsAdminOrReadOnly
 from network.services.google_oauth import verify_google_id_token
 from rest_framework.throttling import ScopedRateThrottle
 from django.middleware.csrf import get_token
@@ -345,12 +346,12 @@ class CategoryViewSet(ModelViewSet):
 class DifficultyViewSet(ModelViewSet):
     serializer_class = DifficultySerializer
     queryset = Difficulty.objects.all()
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class NotionViewSet(ModelViewSet):
     serializer_class = NotionSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
         return Notion.objects.all()
@@ -358,7 +359,7 @@ class NotionViewSet(ModelViewSet):
 
 class QuestionViewSet(ModelViewSet):
     serializer_class = QuestionSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = Question.objects.all()
@@ -370,7 +371,7 @@ class QuestionViewSet(ModelViewSet):
 
 class AnswerViewSet(ModelViewSet):
     serializer_class = AnswerSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = Answer.objects.all()

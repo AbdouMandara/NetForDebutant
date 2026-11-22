@@ -537,3 +537,158 @@ class StatsTests(APITestCase):
     def test_stats_anonyme_refusee(self):
         r = self.client.get(f"{BASE}/users/mes-statistiques/")
         self.assertEqual(r.status_code, 401)
+
+
+# ======================================================================
+# Progression par notion
+# ======================================================================
+class ProgressionTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        # make_quiz crée une notion publiée "le-tcp" avec UNE question
+        self.make_quiz()
+        self.user = self.make_user("joueur@example.com")
+
+    def get_progression(self, user=None, query=""):
+        return self.client.get(
+            f"{BASE}/users/ma-progression/{query}", **self.auth(user or self.user)
+        )
+
+    def add_questions(self, n):
+        """Ajoute n questions (chacune avec 1 bonne + 1 mauvaise réponse) à la notion."""
+        questions = []
+        for i in range(n):
+            q = Question.objects.create(
+                question_text=f"Question {i} ?",
+                explication=f"Explication {i}.",
+                notion=self.notion,
+                difficulty=self.difficulty,
+            )
+            Answer.objects.create(answer_text="Bonne", question=q, is_correct=True)
+            Answer.objects.create(answer_text="Mauvaise", question=q, is_correct=False)
+            questions.append(q)
+        return questions
+
+    def repondre(self, user, question, juste=True):
+        reponse = question.answers.get(is_correct=juste)
+        return self.make_tentative(user, reponse, question=question)
+
+    def by_slug(self, data, slug):
+        return next(d for d in data if d["notion"]["slug"] == slug)
+
+    def test_structure_de_la_reponse(self):
+        data = self.get_progression().json()
+        self.assertEqual(len(data), 1)  # une seule notion publiée
+        d = data[0]
+        self.assertEqual(
+            set(d.keys()),
+            {
+                "notion", "questions_total", "questions_tentees",
+                "questions_reussies", "progression", "est_maitrisee",
+            },
+        )
+        self.assertEqual(set(d["notion"].keys()), {"id", "title", "slug"})
+        self.assertEqual(d["notion"]["slug"], "le-tcp")
+
+    def test_progression_sans_tentative(self):
+        d = self.by_slug(self.get_progression().json(), "le-tcp")
+        self.assertEqual(d["questions_total"], 1)
+        self.assertEqual(d["questions_tentees"], 0)
+        self.assertEqual(d["questions_reussies"], 0)
+        self.assertEqual(d["progression"], 0.0)
+        self.assertFalse(d["est_maitrisee"])
+
+    def test_progression_totale_maitrisee(self):
+        self.repondre(self.user, self.question, juste=True)
+        d = self.by_slug(self.get_progression().json(), "le-tcp")
+        self.assertEqual(d["questions_reussies"], 1)
+        self.assertEqual(d["progression"], 100.0)
+        self.assertTrue(d["est_maitrisee"])
+
+    def test_progression_partielle(self):
+        self.add_questions(3)  # total = 4 questions dans la notion
+        self.repondre(self.user, self.question, juste=True)  # 1/4
+        d = self.by_slug(self.get_progression().json(), "le-tcp")
+        self.assertEqual(d["questions_total"], 4)
+        self.assertEqual(d["questions_tentees"], 1)
+        self.assertEqual(d["questions_reussies"], 1)
+        self.assertEqual(d["progression"], 25.0)
+        self.assertFalse(d["est_maitrisee"])
+
+    def test_question_reussie_meme_si_derniere_fausse(self):
+        """Règle « >= 1 bonne réponse » : une rataj du jour ne dégrade pas."""
+        self.repondre(self.user, self.question, juste=True)
+        self.repondre(self.user, self.question, juste=False)  # 2e tentative, fausse
+        d = self.by_slug(self.get_progression().json(), "le-tcp")
+        self.assertEqual(d["questions_tentees"], 1)
+        self.assertEqual(d["questions_reussies"], 1)
+        self.assertEqual(d["progression"], 100.0)
+        self.assertTrue(d["est_maitrisee"])
+
+    def test_seuil_par_defaut_est_70(self):
+        nouvelles = self.add_questions(9)  # total = 10
+
+        # 6 réussies sur 10 = 60 % -> sous le seuil
+        self.repondre(self.user, self.question, juste=True)
+        for q in nouvelles[:5]:
+            self.repondre(self.user, q, juste=True)
+        d = self.by_slug(self.get_progression().json(), "le-tcp")
+        self.assertEqual(d["progression"], 60.0)
+        self.assertFalse(d["est_maitrisee"])
+
+        # 7e réussite -> 70 % exact -> maîtrisée (frontière incluse)
+        self.repondre(self.user, nouvelles[5], juste=True)
+        d = self.by_slug(self.get_progression().json(), "le-tcp")
+        self.assertEqual(d["progression"], 70.0)
+        self.assertTrue(d["est_maitrisee"])
+
+    def test_seuil_parametre_frontiere(self):
+        self.add_questions(3)  # total = 4
+        self.repondre(self.user, self.question, juste=True)  # 25 %
+
+        d = self.by_slug(self.get_progression(query="?seuil=25").json(), "le-tcp")
+        self.assertTrue(d["est_maitrisee"])  # 25 >= 25
+        d = self.by_slug(self.get_progression(query="?seuil=26").json(), "le-tcp")
+        self.assertFalse(d["est_maitrisee"])  # 25 < 26
+
+    def test_seuil_non_numerique_refuse(self):
+        self.assertEqual(self.get_progression(query="?seuil=abc").status_code, 400)
+
+    def test_seuil_hors_limites_refuse(self):
+        self.assertEqual(self.get_progression(query="?seuil=150").status_code, 400)
+        self.assertEqual(self.get_progression(query="?seuil=-10").status_code, 400)
+
+    def test_isolation_entre_utilisateurs(self):
+        autre = self.make_user("autre@example.com")
+        self.repondre(autre, self.question, juste=True)
+
+        d = self.by_slug(self.get_progression().json(), "le-tcp")
+        self.assertEqual(d["questions_reussies"], 0)  # les tentatives d'autre ne comptent pas
+        self.assertFalse(d["est_maitrisee"])
+
+    def test_notion_non_publiee_exclue(self):
+        cat = Category.objects.create(name="Secret", slug="secret-cat")
+        masquee = Notion.objects.create(
+            title="Masquee", slug="masquee", category=cat, is_published=False
+        )
+        Question.objects.create(
+            question_text="Q cachée ?", explication="E", notion=masquee,
+            difficulty=self.difficulty,
+        )
+        slugs = [x["notion"]["slug"] for x in self.get_progression().json()]
+        self.assertIn("le-tcp", slugs)
+        self.assertNotIn("masquee", slugs)
+
+    def test_notion_sans_question_sans_crash(self):
+        cat = Category.objects.create(name="Vide", slug="vide-cat")
+        Notion.objects.create(
+            title="Vide", slug="vide", category=cat, is_published=True
+        )
+        d = self.by_slug(self.get_progression().json(), "vide")
+        self.assertEqual(d["questions_total"], 0)
+        self.assertEqual(d["progression"], 0.0)  # division par zéro évitée
+        self.assertFalse(d["est_maitrisee"])
+
+    def test_anonyme_refuse(self):
+        r = self.client.get(f"{BASE}/users/ma-progression/")
+        self.assertEqual(r.status_code, 401)

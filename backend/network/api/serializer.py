@@ -109,6 +109,23 @@ class TentativeQuestionSerializer(serializers.ModelSerializer):
         return data
 
 
+class NotionProgressionSerializer(serializers.Serializer):
+    """Progression d'un apprenant sur UNE notion.
+
+    Ce n'est pas un modèle : les valeurs sont calculées à la volée à partir de
+    TentativeQuestion (voir UserViewSet.ma_progression).
+    """
+    notion = serializers.SerializerMethodField()
+    questions_total = serializers.IntegerField()
+    questions_tentees = serializers.IntegerField()
+    questions_reussies = serializers.IntegerField()
+    progression = serializers.FloatField()
+    est_maitrisee = serializers.BooleanField()
+
+    def get_notion(self, obj):
+        return obj.get('notion')
+
+
 # Serializer pour l'auth (celui de base pour l'inscription et la connexion a travers oAUth de Google, pour le login, refresh token, logout etc, on va utiliser les serializer du package django-rest-framework-simplejwt)
 
 class RegisterSerializer(serializers.ModelSerializer):

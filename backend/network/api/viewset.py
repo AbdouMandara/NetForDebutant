@@ -1,9 +1,9 @@
 from django.db import IntegrityError, transaction
-from django.db.models import F, Count, Q
+from django.db.models import F, Count, Q, Exists, OuterRef
 from rest_framework import viewsets
 from network.models import Difficulty, Category, Notion, Question, Utilisateur, Answer, TentativeQuestion
 from rest_framework_simplejwt.tokens import RefreshToken
-from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, AdminAnswerSerializer, TentativeQuestionSerializer, GoogleAuthSerializer, LogoutSerializer
+from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, AdminAnswerSerializer, TentativeQuestionSerializer, NotionProgressionSerializer, GoogleAuthSerializer, LogoutSerializer
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -17,8 +17,12 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.middleware.csrf import CsrfViewMiddleware
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework_simplejwt.exceptions import TokenError
+
+# % de questions réussies (au moins une fois) pour considérer une notion maîtrisée.
+# Surchargeable par requête : GET .../ma-progression/?seuil=50
+SEUIL_MAITRISE = 70
 
 
 class UserViewSet(ModelViewSet):
@@ -56,6 +60,88 @@ class UserViewSet(ModelViewSet):
             'reponses_incorrectes': stats['incorrectes'],
             'taux_reussite': round(stats['correctes'] / total * 100, 2) if total else 0,
         })
+
+    @action(detail=False, methods=['get'], url_path='ma-progression')
+    def ma_progression(self, request):
+        """Progression de l'utilisateur connecté, notion par notion.
+
+        Seules les notions publiées sont listées (même sans tentative) pour
+        montrer ce qu'il reste à étudier. Une notion est « maîtrisée » quand au
+        moins `seuil` % de ses questions ont été réussies UNE FOIS au moins.
+        """
+        user = request.user
+        seuil = self._seuil_maitrise(request)
+
+        # 1 seule requête SQL : une ligne par question publiée, avec 2 booléens
+        # (tentée / réussie) calculés POUR cet utilisateur via des sous-requêtes.
+        # Aucun N+1 : les Exists sont évalués par la base, pas en Python.
+        lignes = (
+            Question.objects.filter(notion__is_published=True)
+            .annotate(
+                tentee=Exists(
+                    TentativeQuestion.objects.filter(
+                        user=user, question=OuterRef('pk')
+                    )
+                ),
+                reussie=Exists(
+                    TentativeQuestion.objects.filter(
+                        user=user,
+                        question=OuterRef('pk'),
+                        selected_answer__is_correct=True,
+                    )
+                ),
+            )
+            .values_list('notion_id', 'tentee', 'reussie')
+        )
+
+        # Regroupement en mémoire (une seule passe, une ligne par question)
+        stats = {}
+        for notion_id, tentee, reussie in lignes:
+            s = stats.setdefault(
+                str(notion_id),
+                {'questions_total': 0, 'questions_tentees': 0, 'questions_reussies': 0},
+            )
+            s['questions_total'] += 1
+            if tentee:
+                s['questions_tentees'] += 1
+            if reussie:
+                s['questions_reussies'] += 1
+
+        # 1 requête : toutes les notions publiées, même sans question
+        resultats = []
+        vide = {'questions_total': 0, 'questions_tentees': 0, 'questions_reussies': 0}
+        for notion in Notion.objects.filter(is_published=True).values('id', 'title', 'slug'):
+            s = stats.get(str(notion['id']), vide)
+            total = s['questions_total']
+            progression = round(s['questions_reussies'] / total * 100, 2) if total else 0.0
+            resultats.append({
+                'notion': {
+                    'id': str(notion['id']),
+                    'title': notion['title'],
+                    'slug': notion['slug'],
+                },
+                'questions_total': total,
+                'questions_tentees': s['questions_tentees'],
+                'questions_reussies': s['questions_reussies'],
+                'progression': progression,
+                'est_maitrisee': total > 0 and progression >= seuil,
+            })
+
+        return Response(NotionProgressionSerializer(resultats, many=True).data)
+
+    @staticmethod
+    def _seuil_maitrise(request):
+        """Seuil de maîtrise en %, surchargeable par le paramètre ?seuil=NN."""
+        brut = request.query_params.get('seuil')
+        if brut is None:
+            return SEUIL_MAITRISE
+        try:
+            seuil = float(brut)
+        except (TypeError, ValueError):
+            raise ValidationError({'seuil': 'Doit être un nombre entre 0 et 100.'})
+        if not 0 <= seuil <= 100:
+            raise ValidationError({'seuil': 'Doit être un nombre entre 0 et 100.'})
+        return seuil
 
         
 # Elle servira au niveau de la verif du csrf

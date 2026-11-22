@@ -3,7 +3,7 @@ from django.db.models import F, Count, Q
 from rest_framework import viewsets
 from network.models import Difficulty, Category, Notion, Question, Utilisateur, Answer, TentativeQuestion
 from rest_framework_simplejwt.tokens import RefreshToken
-from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, TentativeQuestionSerializer, GoogleAuthSerializer, LogoutSerializer
+from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, AdminAnswerSerializer, TentativeQuestionSerializer, GoogleAuthSerializer, LogoutSerializer
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -389,7 +389,7 @@ class QuestionViewSet(ModelViewSet):
 
 
 class AnswerViewSet(ModelViewSet):
-    serializer_class = AnswerSerializer
+    serializer_class = AdminAnswerSerializer
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):

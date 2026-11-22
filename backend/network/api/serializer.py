@@ -15,7 +15,7 @@ class NotionSerializer(serializers.ModelSerializer):
     questions = serializers.SerializerMethodField()
     class Meta:
         model = Notion
-        fields = ['id', 'title', 'slug', 'description', 'is_published', 'photo', 'created_at', 'updated_at', 'questions']
+        fields = ['id', 'title', 'slug', 'description', 'category', 'is_published', 'photo', 'created_at', 'updated_at', 'questions']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_questions(self, obj):
@@ -46,7 +46,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     answers = serializers.SerializerMethodField()
     class Meta:
         model = Question
-        fields = ['id', 'question_text', 'explication', 'created_at', 'updated_at', 'answers', 'difficulty']
+        fields = ['id', 'question_text', 'explication', 'notion', 'created_at', 'updated_at', 'answers', 'difficulty']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_answers(self, obj):
@@ -60,10 +60,31 @@ class QuestionSerializer(serializers.ModelSerializer):
         return serializer.data
     
 class AnswerSerializer(serializers.ModelSerializer):
+    """Serializer public : n'expose PAS is_correct (le front ne doit pas
+    pouvoir tricher en amont ; la correction passe par POST /tentatives/)."""
     class Meta:
         model = Answer
         fields = ['id', 'answer_text', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class AdminAnswerSerializer(serializers.ModelSerializer):
+    """AnswerViewSet : permet à l'admin de créer/éditer avec question et is_correct.
+
+    is_correct est retiré de la réponse pour les non-admins : seul l'admin
+    doit voir quelle réponse est la bonne.
+    """
+    class Meta:
+        model = Answer
+        fields = ['id', 'answer_text', 'question', 'is_correct', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request is not None and not request.user.is_staff:
+            data.pop('is_correct', None)
+        return data
 
 class TentativeQuestionSerializer(serializers.ModelSerializer):
     is_correct = serializers.SerializerMethodField(read_only=True)

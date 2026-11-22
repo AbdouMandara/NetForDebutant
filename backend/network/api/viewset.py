@@ -1,5 +1,5 @@
 from django.db import IntegrityError, transaction
-from django.db.models import F
+from django.db.models import F, Count, Q
 from rest_framework import viewsets
 from network.models import Difficulty, Category, Notion, Question, Utilisateur, Answer, TentativeQuestion
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -39,6 +39,23 @@ class UserViewSet(ModelViewSet):
                 return [IsAdminUser()]
 
         return [IsAuthenticated()]
+
+    @action(detail=False, methods=['get'], url_path='mes-statistiques')
+    def mes_statistiques(self, request):
+        user = request.user
+        stats = TentativeQuestion.objects.filter(user=user).aggregate(
+            total=Count('id'),
+            correctes=Count('id', filter=Q(selected_answer__is_correct=True)),
+            incorrectes=Count('id', filter=Q(selected_answer__is_correct=False)),
+        )
+        total = stats['total']
+        return Response({
+            'score': user.score,
+            'total_tentatives': total,
+            'reponses_correctes': stats['correctes'],
+            'reponses_incorrectes': stats['incorrectes'],
+            'taux_reussite': round(stats['correctes'] / total * 100, 2) if total else 0,
+        })
 
         
 # Elle servira au niveau de la verif du csrf
@@ -399,3 +416,18 @@ class TentativeQuestionViewSet(ModelViewSet):
             Utilisateur.objects.filter(pk=self.request.user.pk).update(
                 score=F('score') + 1
             )
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+
+        # Réponse enrichie pour le front : explication + bonne réponse
+        tentative = serializer.instance
+        bonne_reponse = tentative.question.answers.filter(is_correct=True).first()
+        data = serializer.data
+        data['explication'] = tentative.question.explication
+        data['bonne_reponse'] = bonne_reponse.id if bonne_reponse else None
+
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)

@@ -107,7 +107,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'network.api.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10,
     "DEFAULT_THROTTLE_RATES": {
         "auth_login": "5/minute",

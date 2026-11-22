@@ -144,6 +144,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Fichiers médias (uploads ImageField : avatars, photos de notions)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = str(BASE_DIR) + '/media'
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

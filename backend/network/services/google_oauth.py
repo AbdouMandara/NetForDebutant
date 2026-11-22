@@ -8,7 +8,7 @@ def verify_google_id_token(token):
         id_info = id_token.verify_oauth2_token(
             token,
             requests.Request(),
-            settings.GOOGLE_CLIENT_ID,
+            settings.GOOGLE_ID_CLIENT_FOR_WEB,
         )
 
     except ValueError:

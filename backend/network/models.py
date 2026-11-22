@@ -10,7 +10,10 @@ class Difficulty(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=20, unique=True)
     description = models.TextField(blank=True, null=True)
-    
+
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
@@ -22,6 +25,9 @@ class Category(models.Model):
     slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -43,6 +49,9 @@ class Notion(models.Model):
     #Relationships
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
 
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
         return self.title
 
@@ -57,6 +66,9 @@ class Question(models.Model):
     # Relationships
     notion = models.ForeignKey(Notion, on_delete=models.CASCADE)
     difficulty = models.ForeignKey(Difficulty, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return self.question_text
@@ -95,6 +107,9 @@ class Answer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['created_at']
+
     def __str__(self):
         return self.answer_text
 
@@ -126,6 +141,9 @@ class TentativeQuestion(models.Model):
     )
 
     answered_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-answered_at']
 
     def __str__(self):
         return f"{self.user.username} - {self.question.question_text}"

@@ -357,7 +357,8 @@ class AuthViewSet(viewsets.GenericViewSet):
 
 class CategoryViewSet(ModelViewSet):
     serializer_class = CategorySerializer
-    queryset = Category.objects.all()
+    # prefetch chaîné : Category -> Notions -> Questions -> Answers (évite le N+1)
+    queryset = Category.objects.prefetch_related('notion_set__question_set__answers')
     permission_classes = [IsAdminUser]
 
 
@@ -372,7 +373,7 @@ class NotionViewSet(ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
-        return Notion.objects.all()
+        return Notion.objects.prefetch_related('question_set__answers')
 
 
 class QuestionViewSet(ModelViewSet):
@@ -380,7 +381,7 @@ class QuestionViewSet(ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = Question.objects.all()
+        queryset = Question.objects.prefetch_related('answers')
         notion_id = self.request.query_params.get("notion")
         if notion_id:
             queryset = queryset.filter(notion_id=notion_id)
@@ -405,10 +406,12 @@ class TentativeQuestionViewSet(ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        # select_related : le serializer lit selected_answer.is_correct et question.explication
+        base = TentativeQuestion.objects.select_related('question', 'selected_answer')
         if user.is_staff:
-            return TentativeQuestion.objects.all().order_by('-answered_at')
+            return base.order_by('-answered_at')
         # Un utilisateur ne voit que ses propres tentatives, les plus récentes d'abord
-        return TentativeQuestion.objects.filter(user=user).order_by('-answered_at')
+        return base.filter(user=user).order_by('-answered_at')
 
     def perform_create(self, serializer):
         tentative = serializer.save(user=self.request.user)

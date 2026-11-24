@@ -104,6 +104,12 @@ class APITestCase(TestCase):
             )
         return tentative
 
+    def get_schema(self):
+        """Schéma OpenAPI en JSON (le défaut est du YAML)."""
+        r = self.client.get(f"{BASE}/schema/?format=json")
+        self.assertEqual(r.status_code, 200)
+        return r.json()
+
 
 # ======================================================================
 # Authentification
@@ -700,12 +706,6 @@ class ProgressionTests(APITestCase):
 class DocumentationTests(APITestCase):
     """Endpoints de la doc : schéma, Swagger UI, ReDoc."""
 
-    def get_schema(self):
-        """Schéma OpenAPI en JSON (le défaut est du YAML)."""
-        r = self.client.get(f"{BASE}/schema/?format=json")
-        self.assertEqual(r.status_code, 200)
-        return r.json()
-
     def test_schema_accessible_sans_auth(self):
         r = self.client.get(f"{BASE}/schema/")
         self.assertEqual(r.status_code, 200)
@@ -781,3 +781,37 @@ class DocumentationTests(APITestCase):
             "schema.yml est périmé : régénère-le avec "
             "`python manage.py spectacular --file schema.yml --validate`",
         )
+
+
+# ======================================================================
+# Health check
+# ======================================================================
+class HealthTests(APITestCase):
+    """GET /health/ — public, sans auth (monitoring / uptime)."""
+
+    def test_health_ok_sans_authentification(self):
+        r = self.client.get("/health/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {"status": "ok", "database": "ok"})
+
+    def test_health_503_si_base_injoignable(self):
+        from django.db.utils import OperationalError
+        from unittest.mock import patch
+
+        with patch(
+            "network.views.connection.ensure_connection",
+            side_effect=OperationalError("connection refused"),
+        ):
+            r = self.client.get("/health/")
+
+        self.assertEqual(r.status_code, 503)
+        self.assertEqual(r.json(), {"status": "unavailable", "database": "error"})
+
+    def test_health_documente_dans_le_schema(self):
+        schema = self.get_schema()  # helper de DocumentationTests
+        self.assertIn("/health/", schema["paths"])
+        op = schema["paths"]["/health/"]["get"]
+        self.assertIn("200", op["responses"])
+        self.assertIn("503", op["responses"])
+        # Aucune auth exigée : security vide sur cette opération
+        self.assertEqual(op.get("security"), [{}])

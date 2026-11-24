@@ -13,6 +13,8 @@ La documentation est générée automatiquement par [drf-spectacular](https://dr
 | Swagger UI | `/api/v1/schema/swagger-ui/` |
 | ReDoc | `/api/v1/schema/redoc/` |
 
+**Health check** : `GET /health/` (public, sans auth) renvoie `{"status": "ok", "database": "ok"}` en 200, ou 503 si la base est injoignable.
+
 En local avec `DEBUG=True` : http://localhost:8000/api/v1/schema/swagger-ui/
 
 Le fichier `backend/schema.yml` est commité (utile pour la revue de diff et la génération de clients). **À régénérer après chaque changement d'endpoint ou de serializer :**

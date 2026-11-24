@@ -27,6 +27,7 @@ Repo is a Django/Django REST Framework API. Only `backend/` contains real code; 
 ## API documentation (drf-spectacular)
 - OpenAPI 3.1 schema + Swagger UI + ReDoc served locally (assets via `drf-spectacular-sidecar`, no CDN):
   - `/api/v1/schema/` (YAML), `/api/v1/schema/?format=json`, `/api/v1/schema/swagger-ui/`, `/api/v1/schema/redoc/`
+- `GET /health/` — public health check at repo root (view in `network/views.py`, route in `config/urls.py`): 200 `{"status":"ok","database":"ok"}` or 503 if the DB is unreachable; no auth/throttle by design
 - `backend/schema.yml` is committed and checked by `DocumentationTests.test_schema_yml_commité_est_a_jour` — regenerate it whenever you change endpoints/serializers
 - Config in `config/settings.py`: `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS']`; routes in `config/urls.py`
 - Custom actions/params are annotated with `@extend_schema` in `network/api/viewset.py` (e.g. `?seuil=` on `ma-progression`, `X-Client-Type` header on auth, response shapes for register/login/stats)

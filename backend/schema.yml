@@ -1420,6 +1420,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/MesStatistiques'
           description: ''
+  /health/:
+    get:
+      operationId: health_retrieve
+      description: État de l'application. Renvoie 200 si l'API et la base de données
+        répondent, 503 sinon (base injoignable).
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
 components:
   schemas:
     AdminAnswer:
@@ -1579,6 +1601,19 @@ components:
           writeOnly: true
       required:
       - id_token
+    Health:
+      type: object
+      description: Réponse de GET /health/ (health check public).
+      properties:
+        status:
+          type: string
+          description: « ok » si l'API répond, « unavailable » sinon.
+        database:
+          type: string
+          description: « ok » si la base est joignable, « error » sinon.
+      required:
+      - database
+      - status
     Logout:
       type: object
       properties:

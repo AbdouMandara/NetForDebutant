@@ -239,3 +239,13 @@ class MesStatistiquesSerializer(serializers.Serializer):
     reponses_correctes = serializers.IntegerField()
     reponses_incorrectes = serializers.IntegerField()
     taux_reussite = serializers.FloatField()
+
+
+class HealthSerializer(serializers.Serializer):
+    """Réponse de GET /health/ (health check public)."""
+    status = serializers.CharField(
+        help_text="« ok » si l'API répond, « unavailable » sinon."
+    )
+    database = serializers.CharField(
+        help_text="« ok » si la base est joignable, « error » sinon."
+    )

@@ -10,12 +10,16 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from network.views import HealthView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('network.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Health check public (monitoring / uptime) — hors préfixe API
+    path('health/', HealthView.as_view(), name='health'),
 
     # Documentation de l'API (OpenAPI 3.1 via drf-spectacular)
     path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),

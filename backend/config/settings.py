@@ -137,13 +137,29 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'NetForDebutant API',
     'DESCRIPTION': (
         "API du quiz réseau pédagogique NetForDebutant.\n\n"
-        "**Authentification web** : obtenez un token CSRF via "
-        "`GET /api/v1/auth/csrf_token/`, envoyez-le dans l'en-tête "
-        "`X-CSRFToken`, les tokens sont ensuite renvoyés dans le cookie "
-        "`refresh_token` (chemin `/api/v1/auth/`) et l'access token dans le corps.\n\n"
-        "**Authentification mobile** : envoyez l'en-tête `X-Client-Type: mobile` "
-        "— aucun CSRF n'est exigé et les tokens access/refresh sont renvoyés "
-        "dans le corps de la réponse.\n\n"
+        "## Consommer l'API depuis cette page (Swagger UI)\n\n"
+        "**1. Se connecter** — `POST /api/v1/auth/login/` :\n"
+        "- corps `{\"email\": \"...\", \"password\": \"...\"}`\n"
+        "- ajoutez l'en-tête `X-Client-Type: mobile` (le plus simple ici : "
+        "aucun CSRF, tokens renvoyés dans le corps)\n"
+        "- copiez la valeur de `access` dans la réponse\n\n"
+        "**2. S'authoriser** — bouton **Authorize** en haut à droite → "
+        "collez le token (le préfixe `Bearer ` est ajouté automatiquement) → "
+        "cliquez **Authorize** puis **Close**.\n\n"
+        "**3. Consommer les endpoints protégés** — par ex. "
+        "`GET /api/v1/categories/`, `GET /api/v1/questions/`, "
+        "`POST /api/v1/tentatives/` : **Try it out** → **Execute** → 200. "
+        "Sans le token : 401.\n\n"
+        "### Flux web (sans `X-Client-Type`)\n\n"
+        "1. `GET /api/v1/auth/csrf_token/` → renvoie `csrfToken` et pose le "
+        "cookie CSRF\n"
+        "2. `POST /api/v1/auth/login/` avec l'en-tête `X-CSRFToken: <valeur>`\n"
+        "3. l'access token est dans le corps, le refresh token dans le cookie "
+        "`refresh_token` (chemin `/api/v1/auth/`)\n"
+        "4. `POST /api/v1/auth/refresh/` renouvelle l'access token\n\n"
+        "### Limites de débit (throttle)\n\n"
+        "- login : **5/min** — register : **3/h** — google_oauth : **10/min**\n"
+        "- un 429 signifie trop de tentatives : attendez avant de réessayer\n\n"
         "Toutes les routes protégées attendent `Authorization: Bearer <access>`."
     ),
     'VERSION': '1.0.0',
@@ -154,6 +170,13 @@ SPECTACULAR_SETTINGS = {
     'SWAGGER_UI_DIST': 'SIDECAR',
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
     'REDOC_DIST': 'SIDECAR',
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        # Le token Authorize survit à un rechargement de la page
+        'persistAuthorization': True,
+        # Try it out envoie les cookies (nécessaire au flux CSRF web)
+        'withCredentials': True,
+    },
 }
 
 # Internationalization

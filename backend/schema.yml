@@ -5,9 +5,28 @@ info:
   description: |-
     API du quiz réseau pédagogique NetForDebutant.
 
-    **Authentification web** : obtenez un token CSRF via `GET /api/v1/auth/csrf_token/`, envoyez-le dans l'en-tête `X-CSRFToken`, les tokens sont ensuite renvoyés dans le cookie `refresh_token` (chemin `/api/v1/auth/`) et l'access token dans le corps.
+    ## Consommer l'API depuis cette page (Swagger UI)
 
-    **Authentification mobile** : envoyez l'en-tête `X-Client-Type: mobile` — aucun CSRF n'est exigé et les tokens access/refresh sont renvoyés dans le corps de la réponse.
+    **1. Se connecter** — `POST /api/v1/auth/login/` :
+    - corps `{"email": "...", "password": "..."}`
+    - ajoutez l'en-tête `X-Client-Type: mobile` (le plus simple ici : aucun CSRF, tokens renvoyés dans le corps)
+    - copiez la valeur de `access` dans la réponse
+
+    **2. S'authoriser** — bouton **Authorize** en haut à droite → collez le token (le préfixe `Bearer ` est ajouté automatiquement) → cliquez **Authorize** puis **Close**.
+
+    **3. Consommer les endpoints protégés** — par ex. `GET /api/v1/categories/`, `GET /api/v1/questions/`, `POST /api/v1/tentatives/` : **Try it out** → **Execute** → 200. Sans le token : 401.
+
+    ### Flux web (sans `X-Client-Type`)
+
+    1. `GET /api/v1/auth/csrf_token/` → renvoie `csrfToken` et pose le cookie CSRF
+    2. `POST /api/v1/auth/login/` avec l'en-tête `X-CSRFToken: <valeur>`
+    3. l'access token est dans le corps, le refresh token dans le cookie `refresh_token` (chemin `/api/v1/auth/`)
+    4. `POST /api/v1/auth/refresh/` renouvelle l'access token
+
+    ### Limites de débit (throttle)
+
+    - login : **5/min** — register : **3/h** — google_oauth : **10/min**
+    - un 429 signifie trop de tentatives : attendez avant de réessayer
 
     Toutes les routes protégées attendent `Authorization: Bearer <access>`.
 paths:
@@ -244,6 +263,12 @@ paths:
         côté client (Google Identity Services). Throttle : 10/minute.'
       parameters:
       - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: 'Token CSRF (flux web uniquement), obtenu via GET /api/v1/auth/csrf_token/.
+          Requis sauf si X-Client-Type: mobile.'
+      - in: header
         name: X-Client-Type
         schema:
           type: string
@@ -293,6 +318,12 @@ paths:
         l''en-tête `X-CSRFToken` est exigé. Throttle : 5 connexions/minute.'
       parameters:
       - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: 'Token CSRF (flux web uniquement), obtenu via GET /api/v1/auth/csrf_token/.
+          Requis sauf si X-Client-Type: mobile.'
+      - in: header
         name: X-Client-Type
         schema:
           type: string
@@ -333,6 +364,12 @@ paths:
         supprimé de la réponse).'
       parameters:
       - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: 'Token CSRF (flux web uniquement), obtenu via GET /api/v1/auth/csrf_token/.
+          Requis sauf si X-Client-Type: mobile.'
+      - in: header
         name: X-Client-Type
         schema:
           type: string
@@ -368,6 +405,12 @@ paths:
         exigé). Rotation : un nouveau refresh token est renvoyé si `ROTATE_REFRESH_TOKENS`
         est actif.'
       parameters:
+      - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: 'Token CSRF (flux web uniquement), obtenu via GET /api/v1/auth/csrf_token/.
+          Requis sauf si X-Client-Type: mobile.'
       - in: header
         name: X-Client-Type
         schema:
@@ -406,6 +449,12 @@ paths:
         mobile`, l''en-tête `X-CSRFToken` est exigé (token obtenu via GET /api/v1/auth/csrf_token/).
         Throttle : 3 inscriptions/heure.'
       parameters:
+      - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: 'Token CSRF (flux web uniquement), obtenu via GET /api/v1/auth/csrf_token/.
+          Requis sauf si X-Client-Type: mobile.'
       - in: header
         name: X-Client-Type
         schema:

@@ -40,6 +40,21 @@ HEADER_CLIENT_TYPE = OpenApiParameter(
     ),
 )
 
+# Flux web : token CSRF obtenu via GET /api/v1/auth/csrf_token/
+HEADER_CSRF = OpenApiParameter(
+    'X-CSRFToken',
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.HEADER,
+    required=False,
+    description=(
+        "Token CSRF (flux web uniquement), obtenu via "
+        "GET /api/v1/auth/csrf_token/. Requis sauf si X-Client-Type: mobile."
+    ),
+)
+
+# Les deux en-têtes combinés pour les endpoints qui gèrent les deux flux.
+AUTH_HEADERS = [HEADER_CLIENT_TYPE, HEADER_CSRF]
+
 
 class UserViewSet(ModelViewSet):
     serializer_class = UtilisateurSerializer
@@ -280,7 +295,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     @extend_schema(
         request=RegisterSerializer,
         responses={201: AuthResponseSerializer},
-        parameters=[HEADER_CLIENT_TYPE],
+        parameters=AUTH_HEADERS,
         description=(
             "Inscription classique (username, email, password). Sans "
             "`X-Client-Type: mobile`, l'en-tête `X-CSRFToken` est exigé "
@@ -310,7 +325,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     @extend_schema(
         request=TokenObtainPairSerializer,
         responses={200: AuthResponseSerializer},
-        parameters=[HEADER_CLIENT_TYPE],
+        parameters=AUTH_HEADERS,
         description=(
             "Connexion par email + password. Sans `X-Client-Type: mobile`, "
             "l'en-tête `X-CSRFToken` est exigé. Throttle : 5 connexions/minute."
@@ -344,7 +359,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             400: None,  # jeton invalide ou email non vérifié
             409: None,  # compte existant lié à un autre mode de connexion
         },
-        parameters=[HEADER_CLIENT_TYPE],
+        parameters=AUTH_HEADERS,
         description=(
             "Connexion/inscription via Google : envoyer le `id_token` obtenu "
             "côté client (Google Identity Services). Throttle : 10/minute."
@@ -440,7 +455,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     @extend_schema(
         request=LogoutSerializer,
         responses={200: None},
-        parameters=[HEADER_CLIENT_TYPE],
+        parameters=AUTH_HEADERS,
         description=(
             "Révoque le refresh token (blacklist JWT). Mobile : token dans le "
             "corps `refresh` ; web : lu dans le cookie `refresh_token` (le "
@@ -481,7 +496,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     @extend_schema(
         request=RefreshSerializer,
         responses={200: RefreshResponseSerializer},
-        parameters=[HEADER_CLIENT_TYPE],
+        parameters=AUTH_HEADERS,
         description=(
             "Échange un refresh token contre un nouvel access token. Mobile : "
             "refresh dans le corps ; web : lu dans le cookie `refresh_token` "

@@ -738,6 +738,30 @@ class DocumentationTests(APITestCase):
             "l'en-tête X-Client-Type doit être documenté",
         )
 
+    def test_schema_documente_len_tete_csrf(self):
+        """Le flux web exige X-CSRFToken : il doit être documenté sur login."""
+        op = self.get_schema()["paths"]["/api/v1/auth/login/"]["post"]
+        params = op.get("parameters", [])
+        self.assertTrue(
+            any(p.get("name") == "X-CSRFToken" and p.get("in") == "header"
+                for p in params),
+            "l'en-tête X-CSRFToken doit être documenté",
+        )
+
+    def test_schema_decrit_le_process_de_login(self):
+        """La description du schéma doit guider : login -> Authorize ->
+        consommation des endpoints protégés (ex. /categories/)."""
+        description = self.get_schema()["info"]["description"]
+        for fragment in [
+            "Consommer l'API",
+            "POST /api/v1/auth/login/",
+            "X-Client-Type: mobile",
+            "Authorize",
+            "GET /api/v1/categories/",
+            "Authorization: Bearer",
+        ]:
+            self.assertIn(fragment, description, f"fragment manquant : {fragment!r}")
+
     def test_schema_declare_l_auth_bearer(self):
         sec = self.get_schema()["components"]["securitySchemes"]
         self.assertIn("jwtAuth", sec)

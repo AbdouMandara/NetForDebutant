@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist', #Pour black-lister les tokens de rafraîchissement deja utilisés
+    'drf_spectacular',
+    'drf_spectacular_sidecar',  # sert les assets Swagger/ReDoc localement (pas de CDN)
 
     # Local apps
     'network'
@@ -107,6 +109,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'network.api.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10,
     "DEFAULT_THROTTLE_RATES": {
@@ -125,6 +128,32 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+}
+
+# Documentation de l'API (OpenAPI 3.1 via drf-spectacular)
+# Schéma : /api/v1/schema/ — Swagger UI : /api/v1/schema/swagger-ui/ — ReDoc : /api/v1/schema/redoc/
+# Régénérer le fichier commité : python manage.py spectacular --file schema.yml --validate
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'NetForDebutant API',
+    'DESCRIPTION': (
+        "API du quiz réseau pédagogique NetForDebutant.\n\n"
+        "**Authentification web** : obtenez un token CSRF via "
+        "`GET /api/v1/auth/csrf_token/`, envoyez-le dans l'en-tête "
+        "`X-CSRFToken`, les tokens sont ensuite renvoyés dans le cookie "
+        "`refresh_token` (chemin `/api/v1/auth/`) et l'access token dans le corps.\n\n"
+        "**Authentification mobile** : envoyez l'en-tête `X-Client-Type: mobile` "
+        "— aucun CSRF n'est exigé et les tokens access/refresh sont renvoyés "
+        "dans le corps de la réponse.\n\n"
+        "Toutes les routes protégées attendent `Authorization: Bearer <access>`."
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': r'/api/v1',
+    # Auth documentée automatiquement (extension simplejwt -> securityScheme "jwtAuth")
+    # Assets servis localement par drf-spectacular-sidecar
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
 }
 
 # Internationalization

@@ -21,7 +21,17 @@ Repo is a Django/Django REST Framework API. Only `backend/` contains real code; 
 - `python manage.py makemigrations network` — after model changes
 - `python manage.py shell` — Django shell
 - `python manage.py createsuperuser` — admin user
-- `python manage.py test` — test runner (note: `network/tests.py` is an empty stub; no pytest/ruff/mypy config exists)
+- `python manage.py test` — test runner (tests live in `backend/network/tests/test_api.py`; no pytest/ruff/mypy config exists)
+- `python manage.py spectacular --file schema.yml --validate` — regenerate the committed OpenAPI schema after any endpoint/serializer change
+
+## API documentation (drf-spectacular)
+- OpenAPI 3.1 schema + Swagger UI + ReDoc served locally (assets via `drf-spectacular-sidecar`, no CDN):
+  - `/api/v1/schema/` (YAML), `/api/v1/schema/?format=json`, `/api/v1/schema/swagger-ui/`, `/api/v1/schema/redoc/`
+- `backend/schema.yml` is committed and checked by `DocumentationTests.test_schema_yml_commité_est_a_jour` — regenerate it whenever you change endpoints/serializers
+- Config in `config/settings.py`: `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS']`; routes in `config/urls.py`
+- Custom actions/params are annotated with `@extend_schema` in `network/api/viewset.py` (e.g. `?seuil=` on `ma-progression`, `X-Client-Type` header on auth, response shapes for register/login/stats)
+- `SerializerMethodField` types are declared with `@extend_schema_field` in `network/api/serializer.py` — add one if a new method field triggers a schema warning
+- Gotcha: `ma-progression` returns a plain list; `UserViewSet.pagination_class` is a property returning `None` for that action, otherwise the schema would wrongly wrap it in a paginated object
 
 ## Architecture notes
 - Custom user model: `AUTH_USER_MODEL = "network.Utilisateur"` — UUID primary key, `USERNAME_FIELD = "email"`, `username` still required

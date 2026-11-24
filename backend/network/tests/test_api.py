@@ -692,3 +692,92 @@ class ProgressionTests(APITestCase):
     def test_anonyme_refuse(self):
         r = self.client.get(f"{BASE}/users/ma-progression/")
         self.assertEqual(r.status_code, 401)
+
+
+# ======================================================================
+# Documentation OpenAPI (drf-spectacular)
+# ======================================================================
+class DocumentationTests(APITestCase):
+    """Endpoints de la doc : schéma, Swagger UI, ReDoc."""
+
+    def get_schema(self):
+        """Schéma OpenAPI en JSON (le défaut est du YAML)."""
+        r = self.client.get(f"{BASE}/schema/?format=json")
+        self.assertEqual(r.status_code, 200)
+        return r.json()
+
+    def test_schema_accessible_sans_auth(self):
+        r = self.client.get(f"{BASE}/schema/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"openapi", r.content)
+
+    def test_schema_contient_les_endpoints_cles(self):
+        paths = self.get_schema()["paths"]
+        for chemin in [
+            "/api/v1/users/ma-progression/",
+            "/api/v1/users/mes-statistiques/",
+            "/api/v1/auth/login/",
+            "/api/v1/auth/register/",
+            "/api/v1/auth/google_oauth/",
+            "/api/v1/questions/",
+            "/api/v1/tentatives/",
+        ]:
+            self.assertIn(chemin, paths)
+
+    def test_schema_documente_le_parametre_seuil(self):
+        op = self.get_schema()["paths"]["/api/v1/users/ma-progression/"]["get"]
+        noms = [p["name"] for p in op.get("parameters", [])]
+        self.assertIn("seuil", noms)
+
+    def test_schema_documente_len_tete_mobile(self):
+        op = self.get_schema()["paths"]["/api/v1/auth/login/"]["post"]
+        params = op.get("parameters", [])
+        self.assertTrue(
+            any(p.get("name") == "X-Client-Type" and p.get("in") == "header"
+                for p in params),
+            "l'en-tête X-Client-Type doit être documenté",
+        )
+
+    def test_schema_declare_l_auth_bearer(self):
+        sec = self.get_schema()["components"]["securitySchemes"]
+        self.assertIn("jwtAuth", sec)
+        self.assertEqual(sec["jwtAuth"]["type"], "http")
+        self.assertEqual(sec["jwtAuth"]["scheme"], "bearer")
+
+    def test_schema_ma_progression_renvoie_une_liste_non_paginee(self):
+        """L'endpoint renvoie une liste plate : le schéma ne doit PAS
+        l'envelopper dans un objet paginé (count/results)."""
+        schema = (
+            self.get_schema()["paths"]["/api/v1/users/ma-progression/"]["get"]
+            ["responses"]["200"]
+        )
+        type_schema = schema["content"]["application/json"]["schema"]
+        self.assertEqual(type_schema["type"], "array")
+
+    def test_swagger_ui_accessible(self):
+        r = self.client.get(f"{BASE}/schema/swagger-ui/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_redoc_accessible(self):
+        r = self.client.get(f"{BASE}/schema/redoc/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_schema_yml_commité_est_a_jour(self):
+        """Le schema.yml du dépôt doit correspondre au code : régénérer avec
+        `python manage.py spectacular --file schema.yml --validate` après
+        chaque changement d'endpoint/serializer."""
+        import pathlib
+        from django.core.management import call_command
+        from io import StringIO
+
+        fichier = pathlib.Path(__file__).resolve().parents[2] / "schema.yml"
+        self.assertTrue(fichier.exists(), "backend/schema.yml doit être commité")
+
+        sortie = StringIO()
+        call_command("spectacular", validate=True, stdout=sortie)
+        self.assertEqual(
+            sortie.getvalue().strip(),
+            fichier.read_text(encoding="utf-8").strip(),
+            "schema.yml est périmé : régénère-le avec "
+            "`python manage.py spectacular --file schema.yml --validate`",
+        )

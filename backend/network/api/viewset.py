@@ -3,7 +3,7 @@ from django.db.models import F, Count, Q, Exists, OuterRef
 from rest_framework import viewsets
 from network.models import Difficulty, Category, Notion, Question, Utilisateur, Answer, TentativeQuestion
 from rest_framework_simplejwt.tokens import RefreshToken
-from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, AdminAnswerSerializer, TentativeQuestionSerializer, NotionProgressionSerializer, GoogleAuthSerializer, LogoutSerializer
+from network.api.serializer import CategorySerializer, RegisterSerializer, DifficultySerializer, NotionSerializer, UtilisateurSerializer, QuestionSerializer, AnswerSerializer, AdminAnswerSerializer, TentativeQuestionSerializer, NotionProgressionSerializer, GoogleAuthSerializer, LogoutSerializer, AuthResponseSerializer, RefreshSerializer, RefreshResponseSerializer, CsrfTokenSerializer, MesStatistiquesSerializer
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -19,15 +19,40 @@ from django.utils.decorators import method_decorator
 from django.middleware.csrf import CsrfViewMiddleware
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework_simplejwt.exceptions import TokenError
+from network.api.pagination import StandardResultsSetPagination
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 
 # % de questions réussies (au moins une fois) pour considérer une notion maîtrisée.
 # Surchargeable par requête : GET .../ma-progression/?seuil=50
 SEUIL_MAITRISE = 70
 
+# En-tête commun aux endpoints auth : documenté une seule fois.
+HEADER_CLIENT_TYPE = OpenApiParameter(
+    'X-Client-Type',
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.HEADER,
+    required=False,
+    enum=['mobile'],
+    description=(
+        "Envoyer `mobile` désactive la vérification CSRF et fait renvoyer "
+        "les tokens access/refresh dans le corps de la réponse "
+        "(sinon le refresh part dans le cookie httpOnly `refresh_token`)."
+    ),
+)
+
 
 class UserViewSet(ModelViewSet):
     serializer_class = UtilisateurSerializer
     permission_classes = [IsAuthenticated]
+
+    @property
+    def pagination_class(self):
+        # ma-progression renvoie une liste PLATE (jamais paginée au runtime :
+        # DRF ne pagine que l'action list). Sans cela, drf-spectacular
+        # envelopperait la réponse dans un PaginatedXxxList fictif.
+        if getattr(self, 'action', None) == 'ma_progression':
+            return None
+        return StandardResultsSetPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -44,6 +69,13 @@ class UserViewSet(ModelViewSet):
 
         return [IsAuthenticated()]
 
+    @extend_schema(
+        responses={200: MesStatistiquesSerializer},
+        description=(
+            "Statistiques globales de l'utilisateur connecté : score, nombre "
+            "de tentatives, réponses correctes/incorrectes et taux de réussite."
+        ),
+    )
     @action(detail=False, methods=['get'], url_path='mes-statistiques')
     def mes_statistiques(self, request):
         user = request.user
@@ -61,6 +93,29 @@ class UserViewSet(ModelViewSet):
             'taux_reussite': round(stats['correctes'] / total * 100, 2) if total else 0,
         })
 
+    @extend_schema(
+        responses={200: NotionProgressionSerializer(many=True)},
+        parameters=[
+            OpenApiParameter(
+                name='seuil',
+                type=OpenApiTypes.FLOAT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                default=SEUIL_MAITRISE,
+                description=(
+                    "Pourcentage (0-100) de questions réussies requis pour "
+                    "considérer une notion comme maîtrisée. 400 si invalide."
+                ),
+            )
+        ],
+        description=(
+            "Progression de l'utilisateur connecté, notion par notion. Seules "
+            "les notions publiées sont listées. Une notion est « maîtrisée » "
+            "quand au moins `seuil` % de ses questions ont été réussies une "
+            "fois au moins (une nouvelle tentative ratée ne dégrade pas le "
+            "score d'une question)."
+        ),
+    )
     @action(detail=False, methods=['get'], url_path='ma-progression')
     def ma_progression(self, request):
         """Progression de l'utilisateur connecté, notion par notion.
@@ -172,14 +227,18 @@ class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = [AllowAny]
     # Necessaire pour afficher dans la documentation de l'API
     def get_serializer_class(self):
+        # Attention : doit TOUJOURS renvoyer un serializer (sinon drf-spectacular
+        # échoue à générer le schéma pour l'action csrf_token/refresh).
         serializers = {
             "register": RegisterSerializer,
             "login": TokenObtainPairSerializer,
             "google_oauth": GoogleAuthSerializer,
             "logout": LogoutSerializer,
+            "refresh": RefreshSerializer,
+            "csrf_token": CsrfTokenSerializer,
         }
 
-        return serializers.get(self.action)
+        return serializers.get(self.action, CsrfTokenSerializer)
     
     def get_auth_response(self, utilisateur, message, status_code, refresh=None):
         if refresh is None:
@@ -218,6 +277,17 @@ class AuthViewSet(viewsets.GenericViewSet):
 
 
     # Pour l'inscription
+    @extend_schema(
+        request=RegisterSerializer,
+        responses={201: AuthResponseSerializer},
+        parameters=[HEADER_CLIENT_TYPE],
+        description=(
+            "Inscription classique (username, email, password). Sans "
+            "`X-Client-Type: mobile`, l'en-tête `X-CSRFToken` est exigé "
+            "(token obtenu via GET /api/v1/auth/csrf_token/). Throttle : "
+            "3 inscriptions/heure."
+        ),
+    )
     @action(detail=False, methods=['post'], throttle_classes=[ScopedRateThrottle])
     def register(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
@@ -237,6 +307,15 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
     # Pour la connexion
+    @extend_schema(
+        request=TokenObtainPairSerializer,
+        responses={200: AuthResponseSerializer},
+        parameters=[HEADER_CLIENT_TYPE],
+        description=(
+            "Connexion par email + password. Sans `X-Client-Type: mobile`, "
+            "l'en-tête `X-CSRFToken` est exigé. Throttle : 5 connexions/minute."
+        ),
+    )
     @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def login(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
@@ -257,6 +336,20 @@ class AuthViewSet(viewsets.GenericViewSet):
             refresh=RefreshToken(refresh),
         )
 
+    @extend_schema(
+        request=GoogleAuthSerializer,
+        responses={
+            200: AuthResponseSerializer,
+            201: AuthResponseSerializer,
+            400: None,  # jeton invalide ou email non vérifié
+            409: None,  # compte existant lié à un autre mode de connexion
+        },
+        parameters=[HEADER_CLIENT_TYPE],
+        description=(
+            "Connexion/inscription via Google : envoyer le `id_token` obtenu "
+            "côté client (Google Identity Services). Throttle : 10/minute."
+        ),
+    )
     @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle])
     def google_oauth(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
@@ -344,6 +437,16 @@ class AuthViewSet(viewsets.GenericViewSet):
         )
 
 
+    @extend_schema(
+        request=LogoutSerializer,
+        responses={200: None},
+        parameters=[HEADER_CLIENT_TYPE],
+        description=(
+            "Révoque le refresh token (blacklist JWT). Mobile : token dans le "
+            "corps `refresh` ; web : lu dans le cookie `refresh_token` (le "
+            "cookie est supprimé de la réponse)."
+        ),
+    )
     @action( detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
     def logout(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
@@ -375,6 +478,17 @@ class AuthViewSet(viewsets.GenericViewSet):
         return response
 
     # Pour refresh le token
+    @extend_schema(
+        request=RefreshSerializer,
+        responses={200: RefreshResponseSerializer},
+        parameters=[HEADER_CLIENT_TYPE],
+        description=(
+            "Échange un refresh token contre un nouvel access token. Mobile : "
+            "refresh dans le corps ; web : lu dans le cookie `refresh_token` "
+            "(`X-CSRFToken` exigé). Rotation : un nouveau refresh token est "
+            "renvoyé si `ROTATE_REFRESH_TOKENS` est actif."
+        ),
+    )
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[],throttle_classes=[ScopedRateThrottle],)
     def refresh(self, request):
         is_mobile = request.headers.get("X-Client-Type") == "mobile"
@@ -429,6 +543,13 @@ class AuthViewSet(viewsets.GenericViewSet):
         return response
 
 # Creation de l'endpoint utilisable par le front-end pour avoir le cookie CSRF
+    @extend_schema(
+        responses={200: CsrfTokenSerializer},
+        description=(
+            "Pose le cookie CSRF et renvoie le token à envoyer dans l'en-tête "
+            "`X-CSRFToken` pour tout endpoint auth en mode web."
+        ),
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -494,6 +615,10 @@ class TentativeQuestionViewSet(ModelViewSet):
         user = self.request.user
         # select_related : le serializer lit selected_answer.is_correct et question.explication
         base = TentativeQuestion.objects.select_related('question', 'selected_answer')
+        # is_authenticated : pendant la génération du schéma OpenAPI, la
+        # requête est anonyme — filter(user=AnonymousUser) lèverait une erreur.
+        if not user.is_authenticated:
+            return base.none()
         if user.is_staff:
             return base.order_by('-answered_at')
         # Un utilisateur ne voit que ses propres tentatives, les plus récentes d'abord

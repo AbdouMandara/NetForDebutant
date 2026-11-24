@@ -1,0 +1,2237 @@
+openapi: 3.0.3
+info:
+  title: NetForDebutant API
+  version: 1.0.0
+  description: |-
+    API du quiz réseau pédagogique NetForDebutant.
+
+    **Authentification web** : obtenez un token CSRF via `GET /api/v1/auth/csrf_token/`, envoyez-le dans l'en-tête `X-CSRFToken`, les tokens sont ensuite renvoyés dans le cookie `refresh_token` (chemin `/api/v1/auth/`) et l'access token dans le corps.
+
+    **Authentification mobile** : envoyez l'en-tête `X-Client-Type: mobile` — aucun CSRF n'est exigé et les tokens access/refresh sont renvoyés dans le corps de la réponse.
+
+    Toutes les routes protégées attendent `Authorization: Bearer <access>`.
+paths:
+  /api/token/:
+    post:
+      operationId: api_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/token/refresh/:
+    post:
+      operationId: api_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/answers/:
+    get:
+      operationId: answers_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - answers
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminAnswerList'
+          description: ''
+    post:
+      operationId: answers_create
+      tags:
+      - answers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAnswer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminAnswer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminAnswer'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAnswer'
+          description: ''
+  /api/v1/answers/{id}/:
+    get:
+      operationId: answers_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this answer.
+        required: true
+      tags:
+      - answers
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAnswer'
+          description: ''
+    put:
+      operationId: answers_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this answer.
+        required: true
+      tags:
+      - answers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAnswer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminAnswer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminAnswer'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAnswer'
+          description: ''
+    patch:
+      operationId: answers_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this answer.
+        required: true
+      tags:
+      - answers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminAnswer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminAnswer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminAnswer'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAnswer'
+          description: ''
+    delete:
+      operationId: answers_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this answer.
+        required: true
+      tags:
+      - answers
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/csrf_token/:
+    get:
+      operationId: auth_csrf_token_retrieve
+      description: Pose le cookie CSRF et renvoie le token à envoyer dans l'en-tête
+        `X-CSRFToken` pour tout endpoint auth en mode web.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+          description: ''
+  /api/v1/auth/google_oauth/:
+    post:
+      operationId: auth_google_oauth_create
+      description: 'Connexion/inscription via Google : envoyer le `id_token` obtenu
+        côté client (Google Identity Services). Throttle : 10/minute.'
+      parameters:
+      - in: header
+        name: X-Client-Type
+        schema:
+          type: string
+          enum:
+          - mobile
+        description: Envoyer `mobile` désactive la vérification CSRF et fait renvoyer
+          les tokens access/refresh dans le corps de la réponse (sinon le refresh
+          part dans le cookie httpOnly `refresh_token`).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuth'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GoogleAuth'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GoogleAuth'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '400':
+          description: No response body
+        '409':
+          description: No response body
+  /api/v1/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: 'Connexion par email + password. Sans `X-Client-Type: mobile`,
+        l''en-tête `X-CSRFToken` est exigé. Throttle : 5 connexions/minute.'
+      parameters:
+      - in: header
+        name: X-Client-Type
+        schema:
+          type: string
+          enum:
+          - mobile
+        description: Envoyer `mobile` désactive la vérification CSRF et fait renvoyer
+          les tokens access/refresh dans le corps de la réponse (sinon le refresh
+          part dans le cookie httpOnly `refresh_token`).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: 'Révoque le refresh token (blacklist JWT). Mobile : token dans
+        le corps `refresh` ; web : lu dans le cookie `refresh_token` (le cookie est
+        supprimé de la réponse).'
+      parameters:
+      - in: header
+        name: X-Client-Type
+        schema:
+          type: string
+          enum:
+          - mobile
+        description: Envoyer `mobile` désactive la vérification CSRF et fait renvoyer
+          les tokens access/refresh dans le corps de la réponse (sinon le refresh
+          part dans le cookie httpOnly `refresh_token`).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Logout'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: 'Échange un refresh token contre un nouvel access token. Mobile
+        : refresh dans le corps ; web : lu dans le cookie `refresh_token` (`X-CSRFToken`
+        exigé). Rotation : un nouveau refresh token est renvoyé si `ROTATE_REFRESH_TOKENS`
+        est actif.'
+      parameters:
+      - in: header
+        name: X-Client-Type
+        schema:
+          type: string
+          enum:
+          - mobile
+        description: Envoyer `mobile` désactive la vérification CSRF et fait renvoyer
+          les tokens access/refresh dans le corps de la réponse (sinon le refresh
+          part dans le cookie httpOnly `refresh_token`).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Refresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Refresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Refresh'
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+          description: ''
+  /api/v1/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: 'Inscription classique (username, email, password). Sans `X-Client-Type:
+        mobile`, l''en-tête `X-CSRFToken` est exigé (token obtenu via GET /api/v1/auth/csrf_token/).
+        Throttle : 3 inscriptions/heure.'
+      parameters:
+      - in: header
+        name: X-Client-Type
+        schema:
+          type: string
+          enum:
+          - mobile
+        description: Envoyer `mobile` désactive la vérification CSRF et fait renvoyer
+          les tokens access/refresh dans le corps de la réponse (sinon le refresh
+          part dans le cookie httpOnly `refresh_token`).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+  /api/v1/categories/:
+    get:
+      operationId: categories_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - categories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategoryList'
+          description: ''
+    post:
+      operationId: categories_create
+      tags:
+      - categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Category'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Category'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/categories/{id}/:
+    get:
+      operationId: categories_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this category.
+        required: true
+      tags:
+      - categories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    put:
+      operationId: categories_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this category.
+        required: true
+      tags:
+      - categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Category'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Category'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    patch:
+      operationId: categories_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this category.
+        required: true
+      tags:
+      - categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCategory'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    delete:
+      operationId: categories_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this category.
+        required: true
+      tags:
+      - categories
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/difficulties/:
+    get:
+      operationId: difficulties_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - difficulties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDifficultyList'
+          description: ''
+    post:
+      operationId: difficulties_create
+      tags:
+      - difficulties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Difficulty'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Difficulty'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Difficulty'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Difficulty'
+          description: ''
+  /api/v1/difficulties/{id}/:
+    get:
+      operationId: difficulties_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this difficulty.
+        required: true
+      tags:
+      - difficulties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Difficulty'
+          description: ''
+    put:
+      operationId: difficulties_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this difficulty.
+        required: true
+      tags:
+      - difficulties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Difficulty'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Difficulty'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Difficulty'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Difficulty'
+          description: ''
+    patch:
+      operationId: difficulties_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this difficulty.
+        required: true
+      tags:
+      - difficulties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDifficulty'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDifficulty'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDifficulty'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Difficulty'
+          description: ''
+    delete:
+      operationId: difficulties_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this difficulty.
+        required: true
+      tags:
+      - difficulties
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/notions/:
+    get:
+      operationId: notions_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - notions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotionList'
+          description: ''
+    post:
+      operationId: notions_create
+      tags:
+      - notions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Notion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Notion'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notion'
+          description: ''
+  /api/v1/notions/{id}/:
+    get:
+      operationId: notions_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this notion.
+        required: true
+      tags:
+      - notions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notion'
+          description: ''
+    put:
+      operationId: notions_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this notion.
+        required: true
+      tags:
+      - notions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Notion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Notion'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notion'
+          description: ''
+    patch:
+      operationId: notions_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this notion.
+        required: true
+      tags:
+      - notions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotion'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notion'
+          description: ''
+    delete:
+      operationId: notions_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this notion.
+        required: true
+      tags:
+      - notions
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/questions/:
+    get:
+      operationId: questions_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - questions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedQuestionList'
+          description: ''
+    post:
+      operationId: questions_create
+      tags:
+      - questions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Question'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Question'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+          description: ''
+  /api/v1/questions/{id}/:
+    get:
+      operationId: questions_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this question.
+        required: true
+      tags:
+      - questions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+          description: ''
+    put:
+      operationId: questions_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this question.
+        required: true
+      tags:
+      - questions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Question'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Question'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+          description: ''
+    patch:
+      operationId: questions_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this question.
+        required: true
+      tags:
+      - questions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedQuestion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedQuestion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedQuestion'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+          description: ''
+    delete:
+      operationId: questions_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this question.
+        required: true
+      tags:
+      - questions
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/tentatives/:
+    get:
+      operationId: tentatives_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - tentatives
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTentativeQuestionList'
+          description: ''
+    post:
+      operationId: tentatives_create
+      tags:
+      - tentatives
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TentativeQuestion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TentativeQuestion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TentativeQuestion'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TentativeQuestion'
+          description: ''
+  /api/v1/tentatives/{id}/:
+    get:
+      operationId: tentatives_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tentative question.
+        required: true
+      tags:
+      - tentatives
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TentativeQuestion'
+          description: ''
+    put:
+      operationId: tentatives_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tentative question.
+        required: true
+      tags:
+      - tentatives
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TentativeQuestion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TentativeQuestion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TentativeQuestion'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TentativeQuestion'
+          description: ''
+    patch:
+      operationId: tentatives_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tentative question.
+        required: true
+      tags:
+      - tentatives
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTentativeQuestion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTentativeQuestion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTentativeQuestion'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TentativeQuestion'
+          description: ''
+    delete:
+      operationId: tentatives_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tentative question.
+        required: true
+      tags:
+      - tentatives
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/users/:
+    get:
+      operationId: users_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUtilisateurList'
+          description: ''
+    post:
+      operationId: users_create
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+          description: ''
+  /api/v1/users/{id}/:
+    get:
+      operationId: users_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+          description: ''
+    put:
+      operationId: users_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUtilisateur'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUtilisateur'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUtilisateur'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+          description: ''
+    delete:
+      operationId: users_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/users/ma-progression/:
+    get:
+      operationId: users_ma_progression_list
+      description: Progression de l'utilisateur connecté, notion par notion. Seules
+        les notions publiées sont listées. Une notion est « maîtrisée » quand au moins
+        `seuil` % de ses questions ont été réussies une fois au moins (une nouvelle
+        tentative ratée ne dégrade pas le score d'une question).
+      parameters:
+      - in: query
+        name: seuil
+        schema:
+          type: number
+          format: float
+          default: 70
+        description: Pourcentage (0-100) de questions réussies requis pour considérer
+          une notion comme maîtrisée. 400 si invalide.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotionProgression'
+          description: ''
+  /api/v1/users/mes-statistiques/:
+    get:
+      operationId: users_mes_statistiques_retrieve
+      description: 'Statistiques globales de l''utilisateur connecté : score, nombre
+        de tentatives, réponses correctes/incorrectes et taux de réussite.'
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MesStatistiques'
+          description: ''
+components:
+  schemas:
+    AdminAnswer:
+      type: object
+      description: |-
+        AnswerViewSet : permet à l'admin de créer/éditer avec question et is_correct.
+
+        is_correct est retiré de la réponse pour les non-admins : seul l'admin
+        doit voir quelle réponse est la bonne.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        answer_text:
+          type: string
+          maxLength: 200
+        question:
+          type: string
+          format: uuid
+        is_correct:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - answer_text
+      - created_at
+      - id
+      - question
+      - updated_at
+    Answer:
+      type: object
+      description: |-
+        Serializer public : n'expose PAS is_correct (le front ne doit pas
+        pouvoir tricher en amont ; la correction passe par POST /tentatives/).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        answer_text:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - answer_text
+      - created_at
+      - id
+      - updated_at
+    AuthResponse:
+      type: object
+      description: |-
+        Réponse commune de register / login / google_oauth.
+
+        `refresh` n'est présent que pour les clients mobiles (en-tête
+        `X-Client-Type: mobile`) : le web reçoit le refresh token dans le cookie
+        `refresh_token` (httpOnly, chemin /api/v1/auth/).
+      properties:
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/AuthUser'
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - access
+      - message
+      - user
+    AuthUser:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+      - email
+      - username
+    Category:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        notions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notion'
+          readOnly: true
+      required:
+      - created_at
+      - name
+      - notions
+      - slug
+      - updated_at
+    CsrfToken:
+      type: object
+      description: 'Réponse de GET /auth/csrf_token/ : à renvoyer dans l''en-tête
+        X-CSRFToken.'
+      properties:
+        csrfToken:
+          type: string
+      required:
+      - csrfToken
+    Difficulty:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 20
+        description:
+          type: string
+          nullable: true
+      required:
+      - id
+      - name
+    GoogleAuth:
+      type: object
+      properties:
+        id_token:
+          type: string
+          writeOnly: true
+      required:
+      - id_token
+    Logout:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+      required:
+      - refresh
+    MesStatistiques:
+      type: object
+      description: Réponse de GET /users/mes-statistiques/.
+      properties:
+        score:
+          type: integer
+        total_tentatives:
+          type: integer
+        reponses_correctes:
+          type: integer
+        reponses_incorrectes:
+          type: integer
+        taux_reussite:
+          type: number
+          format: double
+      required:
+      - reponses_correctes
+      - reponses_incorrectes
+      - score
+      - taux_reussite
+      - total_tentatives
+    Notion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+          format: uuid
+        is_published:
+          type: boolean
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+          readOnly: true
+      required:
+      - category
+      - created_at
+      - id
+      - questions
+      - slug
+      - title
+      - updated_at
+    NotionProgression:
+      type: object
+      description: |-
+        Progression d'un apprenant sur UNE notion.
+
+        Ce n'est pas un modèle : les valeurs sont calculées à la volée à partir de
+        TentativeQuestion (voir UserViewSet.ma_progression).
+      properties:
+        notion:
+          allOf:
+          - $ref: '#/components/schemas/NotionRef'
+          readOnly: true
+        questions_total:
+          type: integer
+        questions_tentees:
+          type: integer
+        questions_reussies:
+          type: integer
+        progression:
+          type: number
+          format: double
+        est_maitrisee:
+          type: boolean
+      required:
+      - est_maitrisee
+      - notion
+      - progression
+      - questions_reussies
+      - questions_tentees
+      - questions_total
+    NotionRef:
+      type: object
+      description: Référence courte d'une notion (id, titre, slug) dans les réponses
+        calculées.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+      required:
+      - id
+      - slug
+      - title
+    PaginatedAdminAnswerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAnswer'
+    PaginatedCategoryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    PaginatedDifficultyList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Difficulty'
+    PaginatedNotionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notion'
+    PaginatedQuestionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+    PaginatedTentativeQuestionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TentativeQuestion'
+    PaginatedUtilisateurList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Utilisateur'
+    PatchedAdminAnswer:
+      type: object
+      description: |-
+        AnswerViewSet : permet à l'admin de créer/éditer avec question et is_correct.
+
+        is_correct est retiré de la réponse pour les non-admins : seul l'admin
+        doit voir quelle réponse est la bonne.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        answer_text:
+          type: string
+          maxLength: 200
+        question:
+          type: string
+          format: uuid
+        is_correct:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedCategory:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        notions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notion'
+          readOnly: true
+    PatchedDifficulty:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 20
+        description:
+          type: string
+          nullable: true
+    PatchedNotion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+          format: uuid
+        is_published:
+          type: boolean
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+          readOnly: true
+    PatchedQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        question_text:
+          type: string
+          maxLength: 200
+        explication:
+          type: string
+        notion:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Answer'
+          readOnly: true
+        difficulty:
+          type: string
+          format: uuid
+    PatchedTentativeQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        question:
+          type: string
+          format: uuid
+        selected_answer:
+          type: string
+          format: uuid
+        answered_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_correct:
+          type: boolean
+          readOnly: true
+    PatchedUtilisateur:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        score:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        date_joined:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        question_text:
+          type: string
+          maxLength: 200
+        explication:
+          type: string
+        notion:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Answer'
+          readOnly: true
+        difficulty:
+          type: string
+          format: uuid
+      required:
+      - answers
+      - created_at
+      - difficulty
+      - explication
+      - id
+      - notion
+      - question_text
+      - updated_at
+    Refresh:
+      type: object
+      description: |-
+        Corps de POST /auth/refresh/ côté mobile.
+
+        Côté web, le refresh token est lu dans le cookie `refresh_token` et le
+        corps de requête peut être vide.
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+    RefreshResponse:
+      type: object
+      description: 'Réponse de /auth/refresh/ : access (+ refresh si rotation activée).'
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - access
+    Register:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - id
+      - password
+      - username
+    TentativeQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        question:
+          type: string
+          format: uuid
+        selected_answer:
+          type: string
+          format: uuid
+        answered_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_correct:
+          type: boolean
+          readOnly: true
+      required:
+      - answered_at
+      - id
+      - is_correct
+      - question
+      - selected_answer
+    TokenObtainPair:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - email
+      - password
+      - refresh
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    Utilisateur:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        score:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        date_joined:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+      required:
+      - email
+      - username
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

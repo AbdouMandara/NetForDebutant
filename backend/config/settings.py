@@ -23,6 +23,26 @@ ALLOWED_HOSTS = env.list(
     'ALLOWED_HOSTS'
 )
 
+
+# ==========================================
+# TIGRIS OBJECT STORAGE
+# ==========================================
+
+AWS_ACCESS_KEY_ID = env("TIGRIS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = env("TIGRIS_SECRET_ACCESS_KEY")
+
+AWS_STORAGE_BUCKET_NAME = env("TIGRIS_BUCKET_NAME")
+AWS_S3_ENDPOINT_URL = env("TIGRIS_ENDPOINT_URL")
+AWS_S3_REGION_NAME = env("TIGRIS_REGION", default="auto")
+
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = True
+
+AWS_S3_OBJECT_PARAMETERS = {
+    "CacheControl": "max-age=86400",
+}
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,6 +58,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist', #Pour black-lister les tokens de rafraîchissement deja utilisés
+    'storages',
     'drf_spectacular',
     'drf_spectacular_sidecar',  # sert les assets Swagger/ReDoc localement (pas de CDN)
 
